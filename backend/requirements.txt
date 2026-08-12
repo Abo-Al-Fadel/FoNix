@@ -1,0 +1,30 @@
+# FoNix backend dependencies.
+# Versions are pinned so a fresh `pip install -r requirements.txt` in six
+# months builds the same environment this project was developed and tested
+# against, rather than whatever happens to be latest that day.
+
+Django==6.0.8
+djangorestframework==3.18.0
+djangorestframework-simplejwt==5.5.1
+django-cors-headers==4.9.0
+
+# Reads settings from environment variables / a .env file, with type coercion.
+django-environ==0.14.0
+
+# Required by Django's ImageField for image validation and processing.
+pillow==12.3.0
+
+# --- PostgreSQL -------------------------------------------------------------
+# The intended production database. Commented out because local development
+# defaults to SQLite (see config/settings/local.py) and psycopg needs the
+# Postgres client libraries present to build. Uncomment when pointing
+# DATABASE_URL at a real Postgres instance.
+# psycopg[binary]==3.2.3
+
+# --- Development / test only ------------------------------------------------
+# Kept in one file for simplicity at this project size. A larger codebase would
+# split these into requirements/dev.txt so they never reach a production image.
+django-debug-toolbar==7.1.0
+factory-boy==3.3.3
+black==26.5.1
+isort==8.0.1

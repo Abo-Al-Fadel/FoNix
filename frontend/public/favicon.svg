@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="FoNix">
+  <title>FoNix</title>
+  <!--
+    Favicon build of the mark.
+
+    Padded to a square viewBox and scaled to fill it, because a browser tab
+    renders the icon in a square box and the mark's natural 476x393 ratio would
+    otherwise leave it floating small and off-centre.
+
+    Ember (#E8623D) rather than black or white: a favicon has no control over
+    the tab-bar colour behind it, and the accent reads clearly against both the
+    light and dark chrome. It is also the one place the brand accent is allowed
+    to carry the whole identity on its own.
+  -->
+  <rect width="512" height="512" rx="96" fill="#0A0A0A"/>
+  <g fill="#E8623D" transform="translate(64 100) scale(0.807)">
+    <path d="M190 0 L148 31 L30 334 L227 72 L388 71 L476 2 Z"/>
+    <path d="M203 131 L0 393 L209 201 L298 201 L376 132 Z"/>
+  </g>
+</svg>

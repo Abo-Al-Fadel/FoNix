@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>FoNix — The future, ignited.</title>
+    <meta
+      name="description"
+      content="FoNix builds electric hypercars. Explore the Ignis, Aurea, Cinder and Vesper."
+    />
+
+    <!-- Paints the browser chrome to match the page on mobile, so the site does
+         not sit inside a bright white bar. -->
+    <meta name="theme-color" content="#0A0A0A" />
+    <!-- This is a dark-only brand; declaring it stops the browser applying its
+         own light-mode form control styling. -->
+    <meta name="color-scheme" content="dark" />
+
+    <!-- Icons. The SVG is used where supported and stays crisp at any size; the
+         PNG and .ico are the fallbacks for Safari and older browsers. All three
+         are generated from the same traced vector -- see
+         tools/build_logo_rasters.py. -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate icon" href="/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Warm up the connection to the API before React has even parsed, so the
+         first catalog request is not waiting on a DNS lookup and TCP/TLS
+         handshake. preconnect rather than dns-prefetch because we know for
+         certain a request is coming. -->
+    <link rel="preconnect" href="http://127.0.0.1:8000" />
+
+    <!-- Note: there is deliberately no <link rel="preload" as="video"> for the
+         hero's intro clip. "video" is not a valid `as` value (the spec allows
+         audio/document/embed/fetch/font/image/object/script/style/track/worker),
+         and browsers reject the hint with a console warning. The <video>
+         element carries preload="auto" instead, which is the supported way to
+         ask for the same thing. -->
+
+    <!-- Open Graph, so a link shared to a recruiter renders as a card rather
+         than a bare URL. -->
+    <meta property="og:title" content="FoNix — The future, ignited." />
+    <meta
+      property="og:description"
+      content="An electric hypercar marque. Explore the range."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/logo/fonix-mark-reverse.png" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

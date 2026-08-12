@@ -1,0 +1,210 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Fonts
+
+   Self-hosted through @fontsource rather than a <link> to Google's CDN. Two
+   reasons that matter here: the font files ship with the bundle so there is no
+   third-party round trip on first paint, and the browser has the file before
+   it paints text -- which is what prevents the flash of unstyled text that
+   would otherwise land right in the middle of the hero sequence.
+
+   Only the weights actually used are imported. Pulling in all nine weights of
+   Montserrat would add several hundred kilobytes for nothing.
+--------------------------------------------------------------------------- */
+@import "@fontsource/anton/400.css";
+@import "@fontsource/montserrat/600.css";
+@import "@fontsource/montserrat/700.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+
+/* ---------------------------------------------------------------------------
+   Design tokens
+
+   Tailwind v4 reads @theme and generates utilities from it, so `--color-ember`
+   below is what makes `text-ember`, `bg-ember` and `border-ember` exist. Every
+   colour and font on the site comes from this block -- there are no ad hoc hex
+   values anywhere in the components, which is what keeps ten pages looking
+   like one product.
+--------------------------------------------------------------------------- */
+@theme {
+  --color-void: #0a0a0a; /* primary background */
+  --color-graphite: #1c1c1e; /* cards, panels, secondary surfaces */
+  --color-ember: #e8623d; /* the single accent: CTAs, active states */
+
+  /* Ember darkened for use *behind white text*. The raw accent on near-black
+     only reaches ~4.7:1 against white text at body size, which misses WCAG AA
+     for normal text; this variant is used for solid buttons where white sits
+     on top of it. See the contrast note in the README. */
+  --color-ember-deep: #c74a27;
+
+  /* Text tiers. Named by role rather than by value so a component says what it
+     means -- text-muted, not text-white/60. */
+  --color-muted: rgba(255, 255, 255, 0.6);
+  --color-faint: rgba(255, 255, 255, 0.38);
+
+  /* Glass surface tokens, straight from the design system spec. */
+  --color-hairline: rgba(255, 255, 255, 0.1);
+  --color-glass: rgba(255, 255, 255, 0.05);
+
+  --font-display: "Anton", "Impact", sans-serif;
+  --font-heading: "Montserrat", "Segoe UI", sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+
+  /* One shared easing curve. Reusing it everywhere is most of what makes
+     unrelated animations feel like they belong to the same object. */
+  --ease-fonix: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ---------------------------------------------------------------------------
+   Base layer
+--------------------------------------------------------------------------- */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    /* Stops iOS Safari inflating font sizes on rotation, which would break the
+       hero's carefully sized type. */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-void);
+    color: white;
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    /* The hero pins a section horizontally-safe; this guarantees no page ever
+       scrolls sideways on a phone regardless of a stray wide child. */
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    /* Tight tracking is most of what separates "premium" from "default" in a
+       geometric sans at display sizes. */
+    letter-spacing: -0.02em;
+  }
+
+  /* Keyboard focus.
+
+     The Tailwind preflight removes the default outline, which would leave
+     keyboard users with no way to see where they are. This puts a visible ring
+     back on -- :focus-visible rather than :focus so it appears for keyboard
+     navigation without ringing every mouse click. */
+  :focus-visible {
+    outline: 2px solid var(--color-ember);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background: var(--color-ember);
+    color: white;
+  }
+
+  /* Scrollbar, themed to match rather than sitting as a bright light strip
+     down the side of a black page. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Components
+--------------------------------------------------------------------------- */
+@layer components {
+  /* The glassmorphism spec from the design system, in one place. Every glass
+     surface on the site uses this class, so the blur radius and border opacity
+     can never drift between the navbar and a card. */
+  .fx-glass {
+    background: var(--color-glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--color-hairline);
+  }
+
+  /* Section rhythm. Reusing one class rather than retyping py-24 md:py-32 is
+     what makes the vertical spacing consistent from page to page. */
+  .fx-section {
+    padding-block: 5rem;
+  }
+
+  @media (min-width: 768px) {
+    .fx-section {
+      padding-block: 8rem;
+    }
+  }
+
+  /* Shared page width. */
+  .fx-container {
+    width: 100%;
+    max-width: 80rem;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  @media (min-width: 768px) {
+    .fx-container {
+      padding-inline: 2.5rem;
+    }
+  }
+
+  /* The travelling tick inside the hero's scroll hint. Defined here rather
+     than as an inline style because it needs a @keyframes, and the global
+     prefers-reduced-motion block at the bottom of this file then neutralises
+     it automatically along with everything else. */
+  .fx-scroll-tick {
+    animation: fx-scroll-tick 2.4s var(--ease-fonix) infinite;
+  }
+
+  @keyframes fx-scroll-tick {
+    0% {
+      transform: translateY(-100%);
+    }
+    60%,
+    100% {
+      transform: translateY(1000%);
+    }
+  }
+
+  /* The small uppercase label used above section headings. */
+  .fx-eyebrow {
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-ember);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Reduced motion
+
+   The build brief calls for this in the hero specifically, but a user who has
+   asked their OS for less motion means it site-wide. This kills every
+   transition and animation globally as a safety net, so a component added
+   later cannot reintroduce motion by forgetting to check.
+
+   0.01ms rather than 0s: some browsers skip transitionend/animationend events
+   entirely at exactly zero, and code that waits for them would hang.
+--------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

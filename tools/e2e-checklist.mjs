@@ -124,7 +124,7 @@ const run = async () => {
     await page.waitForFunction(
       () => {
         const v = document.querySelector("video");
-        return v && v.currentTime >= 2.5;
+        return v && v.currentTime >= 2.0;
       },
       { timeout: 15000 },
     );
@@ -245,10 +245,25 @@ const run = async () => {
     // loading and reports a false pass.
     const cards = page.locator('main a[href^="/store/"]');
     await cards.first().waitFor({ timeout: 20000 });
+
+    // Scroll the whole grid through the viewport so lazy-loaded, below-the-fold
+    // card images actually start loading. On a narrow mobile viewport the six
+    // cards stack vertically and most begin off-screen; without this the
+    // "all images complete" check would time out on images the browser
+    // correctly chose not to fetch yet.
+    await page.evaluate(async () => {
+      const step = window.innerHeight;
+      for (let y = 0; y <= document.body.scrollHeight; y += step) {
+        window.scrollTo(0, y);
+        await new Promise((r) => setTimeout(r, 250));
+      }
+      window.scrollTo(0, 0);
+    });
+
     await page.waitForFunction(
       () => {
         const imgs = [...document.querySelectorAll("main img")];
-        return imgs.length >= 4 && imgs.every((i) => i.complete);
+        return imgs.length >= 6 && imgs.every((i) => i.complete);
       },
       { timeout: 20000 },
     );
@@ -266,7 +281,7 @@ const run = async () => {
     record(
       id("3"),
       "Store renders all catalog cars with images and prices",
-      cardCount === 4 && imagesOk && hasPrices,
+      cardCount === 6 && imagesOk && hasPrices,
       `cards=${cardCount} imagesLoaded=${imagesOk} prices=${hasPrices}`,
     );
 
@@ -345,11 +360,14 @@ const run = async () => {
     const password = "hangar-ignition-49";
 
     await page.goto(`${BASE}/register`, { waitUntil: "domcontentloaded" });
-    await page.getByLabel("Username").fill(username);
-    await page.getByLabel("First name").fill("Test");
-    await page.getByLabel("Email").fill(`${username}@fonix.test`);
-    await page.getByLabel("Password", { exact: true }).fill(password);
-    await page.getByLabel("Confirm password").fill(password);
+    // Scope to the register <form>: the footer newsletter also has an Email
+    // field, so a page-wide getByLabel("Email") is now ambiguous.
+    const registerForm = page.locator("main form");
+    await registerForm.getByLabel("Username").fill(username);
+    await registerForm.getByLabel("First name").fill("Test");
+    await registerForm.getByLabel("Email").fill(`${username}@fonix.test`);
+    await registerForm.getByLabel("Password", { exact: true }).fill(password);
+    await registerForm.getByLabel("Confirm password").fill(password);
     await page.getByRole("button", { name: /Create account/i }).click();
 
     await page.waitForURL(/\/account/, { timeout: 15000 });
@@ -579,15 +597,18 @@ const run = async () => {
     attachConsoleWatch(page, "contact");
 
     await page.goto(`${BASE}/contact`, { waitUntil: "domcontentloaded" });
-    await page.getByLabel("Name").waitFor({ timeout: 10000 });
+    // Scope to the contact <form> in <main>: the footer newsletter form (also
+    // in the DOM) has its own Email field.
+    const contactForm = page.locator("main form");
+    await contactForm.getByLabel("Name").waitFor({ timeout: 10000 });
 
-    await page.getByLabel("Name").fill("Ada Lovelace");
-    await page.getByLabel("Email").fill("ada@example.com");
-    await page.getByLabel("Subject").fill("Ignis availability");
-    await page
+    await contactForm.getByLabel("Name").fill("Ada Lovelace");
+    await contactForm.getByLabel("Email").fill("ada@example.com");
+    await contactForm.getByLabel("Subject").fill("Ignis availability");
+    await contactForm
       .getByLabel("Message")
       .fill("When does the Ignis reach the UK, and can I visit the hangar?");
-    await page.getByRole("button", { name: /Send message/i }).click();
+    await contactForm.getByRole("button", { name: /Send message/i }).click();
 
     await page
       .getByRole("heading", { name: "Thank you." })
@@ -603,8 +624,11 @@ const run = async () => {
     expectServerRejection = true;
     await page.getByRole("button", { name: /Send another/i }).click();
     await page.waitForTimeout(400);
-    await page.getByLabel("Message").fill("hi");
-    await page.getByRole("button", { name: /Send message/i }).click();
+    await page.locator("main form").getByLabel("Message").fill("hi");
+    await page
+      .locator("main form")
+      .getByRole("button", { name: /Send message/i })
+      .click();
     await page.waitForTimeout(1200);
     const rejected = /at least 10 characters/i.test(
       await page.locator("main").innerText(),

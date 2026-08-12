@@ -8,6 +8,21 @@ FoNix is invented. That is deliberate — putting a real manufacturer's
 trademarked name and design language on a public portfolio would be borrowing
 someone else's intellectual property rather than demonstrating anything.
 
+### The documentation
+
+| File | What it is |
+|---|---|
+| **README.md** (this file) | How to run it, the API, the design decisions |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | A request traced end to end; the data model and every security measure explained |
+| [LEARNING.md](LEARNING.md) | Nine hands-on Django exercises with exact commands — start here if you're learning |
+| [REVIEW_NOTES.md](REVIEW_NOTES.md) | Bugs found and fixed, and the results of an adversarial security probe |
+
+### Verified
+
+- **88** backend tests (`python manage.py test`)
+- **32** end-to-end browser checks (`node tools/e2e-checklist.mjs`)
+- **21** adversarial security checks (`node tools/security-probe.mjs`)
+
 ---
 
 ## Running it
@@ -23,7 +38,7 @@ backend_venv/Scripts/pip install -r backend/requirements.txt   # Linux/macOS: ba
 cd backend
 cp .env.example .env          # then set SECRET_KEY — see the file for how
 python manage.py migrate
-python manage.py seed_catalog # populates the four models and their imagery
+python manage.py seed_catalog # populates the six models and their imagery
 python manage.py createsuperuser
 python manage.py runserver
 ```
@@ -130,17 +145,18 @@ the point it applies; this is the summary.
 ### Non-flagship models have generated artwork, not borrowed photographs
 
 Only the flagship Ignis has real imagery, taken from the source footage. The
-Aurea, Cinder and Vesper are shown with generated brand artwork — a dark studio
-composition carrying an oversized FoNix mark — and a **"visualisation pending"**
-badge on both the catalog card and the product page.
+The other five models (Aurea, Cinder, Vesper, Lumen, Atlas) are shown with
+generated brand artwork — a dark studio composition carrying an oversized FoNix
+mark — and a **"visualisation pending"** badge on both the catalog card and the
+product page.
 
-Reusing the Ignis's photographs relabelled as three other cars would read as an
+Reusing the Ignis's photographs relabelled as other cars would read as an
 obvious content bug to anyone browsing the store. A plain grey box would read as
 broken. The generated art is unmistakably a design placeholder, stays inside the
 brand, and says what it is. See
 `backend/cars/management/commands/_placeholder_art.py`.
 
-All four remain purchasable so the cart and checkout flow can be exercised with
+All six remain purchasable so the cart and checkout flow can be exercised with
 more than one model.
 
 ### The logo was vectorised, not traced by eye

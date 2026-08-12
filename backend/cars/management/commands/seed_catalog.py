@@ -130,6 +130,48 @@ CATALOG = [
         "has_real_imagery": False,
         "art": {"scale": 0.5, "centre_x": 0.5, "centre_y": 0.52, "glow": 0.62},
     },
+    {
+        "name": "FoNix Lumen",
+        "slug": "lumen",
+        "tagline": "The quiet one.",
+        "description": (
+            "The entry point to the marque, and the hardest car we have built. "
+            "Anyone can make a fast car expensive; making a fast car cheap "
+            "enough to sell and still worth the badge took four years.\n\n"
+            "A single rear motor, a 74kWh pack, and a kerb weight under 1,500kg "
+            "because the cheapest way to add performance is still to remove "
+            "mass. It will out-corner most things costing three times as much, "
+            "and it will do it without telling anybody."
+        ),
+        "base_price": Decimal("148000.00"),
+        "range_km": 540,
+        "top_speed_kmh": 250,
+        "acceleration_0_100": Decimal("4.10"),
+        "is_hero": False,
+        "has_real_imagery": False,
+        "art": {"scale": 0.44, "centre_x": 0.42, "centre_y": 0.5, "glow": 0.48},
+    },
+    {
+        "name": "FoNix Atlas",
+        "slug": "atlas",
+        "tagline": "For the roads that stopped being roads.",
+        "description": (
+            "A raised, long-travel FoNix with 280mm of ground clearance and a "
+            "motor at each corner. Not a soft-roader with a body kit — the "
+            "battery floor is a structural skid plate, and the suspension was "
+            "signed off in Iceland rather than on a ring road.\n\n"
+            "It carries five people and their luggage 700 kilometres, then "
+            "climbs something that would stop a van. The two facts are not in "
+            "tension; they are the same engineering."
+        ),
+        "base_price": Decimal("310000.00"),
+        "range_km": 700,
+        "top_speed_kmh": 230,
+        "acceleration_0_100": Decimal("3.80"),
+        "is_hero": False,
+        "has_real_imagery": False,
+        "art": {"scale": 0.66, "centre_x": 0.52, "centre_y": 0.46, "glow": 0.4},
+    },
 ]
 
 

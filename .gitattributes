@@ -1,0 +1,40 @@
+# Line endings
+#
+# Without this, every file committed from Windows carries CRLF and every file
+# committed from macOS/Linux carries LF -- so the first person to open the repo
+# on another OS sees every line of every file as changed. `text=auto` tells git
+# to store LF in the repository and convert to the platform's native ending on
+# checkout, which makes the diff noise disappear.
+* text=auto eol=lf
+
+# Files that MUST keep LF regardless of platform: shell scripts break outright
+# with CRLF, and .env parsing is fragile.
+*.sh text eol=lf
+*.py text eol=lf
+*.env text eol=lf
+
+# Windows batch files genuinely need CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets -- never convert line endings, never try to diff them as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.mp4 binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+
+# Generated / vendored files. `linguist-generated` collapses them in GitHub's
+# diff view; `linguist-vendored` keeps them out of the repository's language
+# statistics, so the project is not reported as 60% JSON because of a lockfile.
+package-lock.json linguist-generated=true
+*/migrations/*.py linguist-generated=true
+
+# The hero frame sequence is source material, not code we wrote. Excluding it
+# from language stats stops GitHub reporting this repo as mostly images.
+frontend/public/frames/** linguist-vendored=true
+fonix_assest/** linguist-vendored=true

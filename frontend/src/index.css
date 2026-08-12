@@ -29,20 +29,42 @@
    like one product.
 --------------------------------------------------------------------------- */
 @theme {
-  --color-void: #0a0a0a; /* primary background */
-  --color-graphite: #1c1c1e; /* cards, panels, secondary surfaces */
+  /* ---------------------------------------------------------------------
+     Surfaces — a LADDER, not two tones.
+
+     Pure #000 is what makes a dark site look cheap: real screens never show
+     it, and every panel on top of it reads as a flat sticker. The reference
+     marques all avoid it — Porsche's page black is rgb(1,2,5), Lamborghini
+     stacks #000 / #181818 / #424242 to build depth.
+
+     So these are blue-shifted (higher B than R) rather than neutral grey.
+     A cool near-black reads as "machined metal"; a neutral one reads as
+     "switched-off screen".
+
+     Use them as a ladder: void for the page, abyss for alternating bands,
+     graphite for panels, slate for a panel raised above another panel.
+  --------------------------------------------------------------------- */
+  --color-void: #07080b; /* page background — deepest */
+  --color-abyss: #0b0d12; /* alternating section bands */
+  --color-graphite: #14161c; /* cards, panels */
+  --color-slate: #1e2129; /* raised surfaces, hover states */
+
   --color-ember: #e8623d; /* the single accent: CTAs, active states */
 
-  /* Ember darkened for use *behind white text*. The raw accent on near-black
-     only reaches ~4.7:1 against white text at body size, which misses WCAG AA
-     for normal text; this variant is used for solid buttons where white sits
-     on top of it. See the contrast note in the README. */
+  /* Ember darkened for use *behind white text*. The raw accent only reaches
+     ~3.5:1 against white at body size, missing WCAG AA for normal text; this
+     variant is used wherever white sits on top of it. */
   --color-ember-deep: #c74a27;
 
   /* Text tiers. Named by role rather than by value so a component says what it
-     means -- text-muted, not text-white/60. */
-  --color-muted: rgba(255, 255, 255, 0.6);
-  --color-faint: rgba(255, 255, 255, 0.38);
+     means -- text-muted, not text-white/60.
+
+     `ice` rather than pure #FFF: Porsche sets body text to rgb(250,251,255).
+     A faint blue lift stops white text vibrating against a dark background,
+     which is a real legibility gain, not just taste. */
+  --color-ice: #f6f8ff;
+  --color-muted: rgba(233, 238, 255, 0.62);
+  --color-faint: rgba(233, 238, 255, 0.38);
 
   /* Glass surface tokens, straight from the design system spec. */
   --color-hairline: rgba(255, 255, 255, 0.1);
@@ -69,12 +91,33 @@
   }
 
   body {
+    /* A single flat colour is what makes a dark page feel like a dead
+       rectangle. Two very large, very low-opacity radial washes -- one ember,
+       one cold blue -- give the background a direction and a temperature
+       without ever being consciously visible.
+
+       `fixed` attachment means they stay put while content scrolls over them,
+       so the page feels lit rather than painted. */
     background-color: var(--color-void);
-    color: white;
+    background-image:
+      radial-gradient(
+        ellipse 80% 55% at 12% -5%,
+        rgba(232, 98, 61, 0.09),
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse 70% 50% at 92% 8%,
+        rgba(90, 130, 220, 0.07),
+        transparent 62%
+      );
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+
+    color: var(--color-ice);
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
-    /* The hero pins a section horizontally-safe; this guarantees no page ever
-       scrolls sideways on a phone regardless of a stray wide child. */
+    /* Guarantees no page ever scrolls sideways on a phone, regardless of a
+       stray wide child. */
     overflow-x: hidden;
   }
 
@@ -170,6 +213,96 @@
     100% {
       transform: translateY(1000%);
     }
+  }
+
+  /* -------------------------------------------------------------------
+     Atmosphere
+
+     The difference between "a dark website" and "a luxury dark website" is
+     almost entirely whether the background has depth. These are the tools
+     for that. All of them are decorative and must be applied to an
+     aria-hidden element or a ::before, never to content.
+  ------------------------------------------------------------------- */
+
+  /* An alternating band, one step lighter than the page, with both edges
+     faded to nothing. Lamborghini separates sections with
+     `linear-gradient(#181818, transparent)` rather than a hard rule -- the
+     eye reads a soft transition as depth and a 1px line as a seam. */
+  .fx-band {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .fx-band::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      var(--color-abyss) 14%,
+      var(--color-abyss) 86%,
+      transparent 100%
+    );
+  }
+
+  /* A soft coloured wash, for placing behind a section that needs lifting.
+     Positioned by the caller with the usual utilities. */
+  .fx-glow {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(90px);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .fx-glow-ember {
+    background: rgba(232, 98, 61, 0.16);
+  }
+
+  .fx-glow-cold {
+    background: rgba(96, 140, 235, 0.13);
+  }
+
+  /* A hairline that fades out at both ends. A full-width 1px border reads as
+     a box edge; this reads as a horizon. */
+  .fx-rule {
+    height: 1px;
+    border: 0;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(255, 255, 255, 0.13) 18%,
+      rgba(255, 255, 255, 0.13) 82%,
+      transparent
+    );
+  }
+
+  /* Sheen that sweeps across a card on hover. Pure decoration, but it is the
+     kind of detail that separates a template from a considered build. */
+  .fx-sheen {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .fx-sheen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 35%,
+      rgba(255, 255, 255, 0.07) 50%,
+      transparent 65%
+    );
+    transform: translateX(-100%);
+    transition: transform 900ms var(--ease-fonix);
+    pointer-events: none;
+  }
+
+  .fx-sheen:hover::after {
+    transform: translateX(100%);
   }
 
   /* The small uppercase label used above section headings. */

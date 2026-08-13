@@ -39,17 +39,19 @@ PRODUCT_DIR = Path(settings.BASE_DIR).parent / "frontend" / "public" / "product"
 # stills. They are all genuinely different views of the same car, which is
 # exactly what a product gallery should be.
 FLAGSHIP_STILLS = [
-    ("frame_001.webp", "The FoNix Ignis head-on, headlights lit, in a dark studio."),
     (
-        "frame_060.webp",
-        "The FoNix Ignis in three-quarter profile, lit along its flank.",
+        "frame_040.webp",
+        "The FoNix Ignis in a front three-quarter view, both headlights lit, "
+        "reflected on a wet studio floor.",
     ),
+    ("frame_001.webp", "The FoNix Ignis head-on, headlights lit, in a dark studio."),
     ("frame_120.webp", "The FoNix Ignis in profile with its dihedral door raised."),
     ("frame_190.webp", "The FoNix Ignis cabin, seen through the open door."),
 ]
 
-# The thumbnail is the three-quarter view -- the most legible shape at card size.
-FLAGSHIP_THUMBNAIL = "frame_060.webp"
+# The thumbnail is the front three-quarter hero view -- the most flattering and
+# legible shape at card size.
+FLAGSHIP_THUMBNAIL = "frame_040.webp"
 
 
 CATALOG = [

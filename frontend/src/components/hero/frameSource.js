@@ -16,14 +16,15 @@
  * So the mobile set applies both reductions at once:
  *
  *   frame count   215 -> 108  (every second frame)
- *   resolution    1600x900 -> 800x450
+ *   resolution    1600x900 -> 1200x675
  *   ---------------------------------------------
- *   payload       ~12MB -> 1.44MB   (13.7KB per frame)
+ *   payload       ~12MB -> ~2.9MB  (27.7KB per frame)
  *
  * That keeps the actual scroll-scrub -- which is the thing worth showing --
- * rather than degrading it to a cross-fade, while cutting the download by 88%.
- * 108 frames over the pinned scroll distance is still ~1 frame per 12px of
- * scroll, which reads as continuous motion.
+ * rather than degrading it to a cross-fade, while cutting the download by ~76%.
+ * 1200 wide (up from an earlier 800, which looked soft once a phone scaled it)
+ * stays crisp on a high-DPR screen. 108 frames over the pinned scroll distance
+ * is still ~1 frame per 12px of scroll, which reads as continuous motion.
  *
  * Regenerate the mobile set with:
  *   backend_venv/Scripts/python tools/build_mobile_frames.py
@@ -39,8 +40,8 @@ export const DESKTOP_FRAMES = {
 export const MOBILE_FRAMES = {
   count: 108,
   path: "/frames/scroll-mobile",
-  width: 800,
-  height: 450,
+  width: 1200,
+  height: 675,
 };
 
 /** Frames are named frame_001.webp ... frame_215.webp (1-indexed). */

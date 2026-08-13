@@ -194,12 +194,14 @@ alone still leaves ~6MB:
 | | Desktop | Mobile |
 |---|---|---|
 | Frames | 215 | 108 (every second frame) |
-| Resolution | 1600×900 | 800×450 |
-| Payload | ~12MB | **1.44MB** |
+| Resolution | 1600×900 | 1200×675 |
+| Payload | ~12MB | **~2.9MB** |
 
 That keeps the real scroll-scrub - the thing actually worth showing - rather
-than degrading it to a cross-fade, while cutting the download by 88%. Rebuild
-the mobile set with `tools/build_mobile_frames.py`.
+than degrading it to a cross-fade, while cutting the download by ~76%. The
+mobile frames are held at 1200 wide rather than a lighter 800 so they stay crisp
+on a high-DPR phone screen. Rebuild the mobile set with
+`tools/build_mobile_frames.py`.
 
 ### Admins see every order
 

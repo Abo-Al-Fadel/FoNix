@@ -497,19 +497,22 @@ export default function HeroSequence() {
             </ClipReveal>
 
             {/*
-              Anton, the one display moment on the site, now carries real
-              headline copy. Two lines, each rising from its own clip window,
-              with the payoff word in ember.
+              Anton, the one display moment on the site, carries the headline.
+              Two lines, each rising from its own clip window, with the payoff
+              word in ember. Both spans are left-aligned blocks, so the first
+              letter of each line stacks vertically -- the "T" of THE FUTURE sits
+              directly above the "I" of IGNITED. No trailing punctuation: a
+              headline is not a sentence.
             */}
             <h1
               className="mt-4 font-display uppercase leading-[0.9] tracking-[0.01em] text-white"
               style={{ fontSize: "clamp(2.75rem, 1rem + 8.5vw, 7.5rem)" }}
             >
               <ClipReveal show={isUiVisible} delay={80}>
-                <span className="block">The future,</span>
+                <span className="block">The future</span>
               </ClipReveal>
               <ClipReveal show={isUiVisible} delay={160}>
-                <span className="block text-ember">ignited.</span>
+                <span className="block text-ember">ignited</span>
               </ClipReveal>
             </h1>
 

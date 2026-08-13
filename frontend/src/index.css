@@ -113,6 +113,16 @@
     /* Stops iOS Safari inflating font sizes on rotation, which would break the
        hero's carefully sized type. */
     -webkit-text-size-adjust: 100%;
+    /* Reserve the vertical scrollbar's gutter permanently. The hero locks the
+       body (overflow:hidden) during the intro, which would otherwise remove the
+       scrollbar and then jolt the whole layout sideways by its width when the
+       lock releases. Reserving the gutter keeps that column of space present
+       from the first paint, so nothing ever shifts.
+
+       `scrollbar-gutter` rather than `overflow-y: scroll`: the latter makes the
+       root itself scrollable, which defeats the body-overflow lock and lets the
+       intro be scrolled past. This reserves the space without that side effect. */
+    scrollbar-gutter: stable;
   }
 
   body {
@@ -322,12 +332,15 @@
       transparent 65%
     );
     transform: translateX(-100%);
-    transition: transform 900ms var(--ease-fonix);
+    /* No transition at rest: when the pointer leaves, the band snaps back to
+       its off-screen start instead of visibly sweeping back leftwards. The
+       sweep therefore only ever runs once, left-to-right, on hover. */
     pointer-events: none;
   }
 
   .fx-sheen:hover::after {
     transform: translateX(100%);
+    transition: transform 900ms var(--ease-fonix);
   }
 
   /* The small uppercase label used above section headings. */

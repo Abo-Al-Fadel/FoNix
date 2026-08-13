@@ -118,7 +118,7 @@ const run = async () => {
 
     // Title should still be hidden before the 2.2s mark, then appear.
     const earlyOpacity = await page
-      .locator("h1", { hasText: "FONIX" })
+      .locator("h1", { hasText: "The future" })
       .evaluate((el) => getComputedStyle(el.parentElement).opacity);
 
     await page.waitForFunction(
@@ -130,7 +130,7 @@ const run = async () => {
     );
     await page.waitForTimeout(1200);
     const lateOpacity = await page
-      .locator("h1", { hasText: "FONIX" })
+      .locator("h1", { hasText: "The future" })
       .evaluate((el) => getComputedStyle(el.parentElement).opacity);
 
     record(
@@ -204,7 +204,7 @@ const run = async () => {
       .catch(() => false);
     const overflow = await page.evaluate(() => document.body.style.overflow);
     const titleOpacity = await page
-      .locator("h1", { hasText: "FONIX" })
+      .locator("h1", { hasText: "The future" })
       .evaluate((el) => getComputedStyle(el.parentElement).opacity);
 
     record(

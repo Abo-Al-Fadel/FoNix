@@ -180,14 +180,6 @@ export default function Store() {
                 </RevealItem>
               ))}
             </RevealGroup>
-
-            <Reveal className="mt-14">
-              <p className="max-w-2xl font-body text-sm leading-relaxed text-faint">
-                Photography currently exists for the Ignis only. Models marked
-                “visualisation pending” are shown with brand artwork rather than
-                a relabelled photograph of a different car.
-              </p>
-            </Reveal>
           </>
         ) : null}
 

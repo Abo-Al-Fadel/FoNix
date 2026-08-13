@@ -19,7 +19,7 @@ pillow==12.3.0
 # defaults to SQLite (see config/settings/local.py) and psycopg needs the
 # Postgres client libraries present to build. Uncomment when pointing
 # DATABASE_URL at a real Postgres instance.
-# psycopg[binary]==3.2.3
+# psycopg[binary]==3.2.13
 
 # --- Development / test only ------------------------------------------------
 # Kept in one file for simplicity at this project size. A larger codebase would

@@ -56,8 +56,8 @@ export default function Footer() {
         className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-ember/45 to-transparent"
       />
 
-      <div className="fx-container py-16 md:py-20">
-        <div className="grid gap-12 lg:grid-cols-[1.5fr_repeat(3,1fr)] lg:gap-10">
+      <div className="fx-container py-12 md:py-20">
+        <div className="grid gap-10 lg:grid-cols-[1.5fr_2fr] lg:gap-16">
           {/* --- Brand column --- */}
           <div>
             <Link
@@ -102,36 +102,41 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* --- Link columns --- */}
-          {COLUMNS.map((column) => (
-            <nav key={column.heading} aria-label={column.heading}>
-              <h2 className="font-body text-[11px] font-semibold uppercase tracking-[0.22em] text-faint">
-                {column.heading}
-              </h2>
-              <ul className="mt-5 space-y-0.5">
-                {column.links.map((link) => (
-                  <li key={link.to + link.label}>
-                    <Link
-                      to={link.to}
-                      // Generous vertical padding gives every link a 44px touch
-                      // target without visibly spacing the list out.
-                      className="group inline-flex min-h-11 items-center font-body text-sm text-muted transition-colors hover:text-white"
-                    >
-                      <span className="relative">
-                        {link.label}
-                        {/* An underline that grows from the left on hover --
-                            cheaper and quieter than a colour change alone. */}
-                        <span
-                          aria-hidden="true"
-                          className="absolute -bottom-0.5 left-0 h-px w-0 bg-ember transition-all duration-300 ease-fonix group-hover:w-full"
-                        />
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          ))}
+          {/* --- Link columns ---
+              On a phone these sit two-up (three-up from sm) rather than stacking
+              into one very tall column, which is what made the footer run on
+              forever on mobile. */}
+          <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3">
+            {COLUMNS.map((column) => (
+              <nav key={column.heading} aria-label={column.heading}>
+                <h2 className="font-body text-[11px] font-semibold uppercase tracking-[0.22em] text-faint">
+                  {column.heading}
+                </h2>
+                <ul className="mt-4">
+                  {column.links.map((link) => (
+                    <li key={link.to + link.label}>
+                      <Link
+                        to={link.to}
+                        // Generous vertical padding gives every link a 44px touch
+                        // target without visibly spacing the list out.
+                        className="group inline-flex min-h-11 items-center font-body text-sm text-muted transition-colors hover:text-white"
+                      >
+                        <span className="relative">
+                          {link.label}
+                          {/* An underline that grows from the left on hover --
+                              cheaper and quieter than a colour change alone. */}
+                          <span
+                            aria-hidden="true"
+                            className="absolute -bottom-0.5 left-0 h-px w-0 bg-ember transition-all duration-300 ease-fonix group-hover:w-full"
+                          />
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            ))}
+          </div>
         </div>
 
         <NewsletterSignup />
@@ -162,7 +167,7 @@ function NewsletterSignup() {
   const [submitted, setSubmitted] = useState(false);
 
   return (
-    <div className="mt-16 rounded-card border border-hairline bg-graphite/40 p-6 md:p-8">
+    <div className="mt-12 rounded-card border border-hairline bg-graphite/40 p-6 md:mt-16 md:p-8">
       <div className="grid gap-6 md:grid-cols-[1.2fr_1fr] md:items-center md:gap-10">
         <div>
           <h2 className="font-heading text-lg font-bold text-white md:text-xl">

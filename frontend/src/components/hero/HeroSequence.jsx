@@ -29,16 +29,29 @@ const UI_REVEAL_AT = 1.4;
 const SCRUB_DISTANCE = 4.2;
 
 /**
- * Fades the bottom of the hero wordmark out where the car's bonnet crosses it.
+ * A line of text that rises up out of a clip window on reveal.
  *
- * Cut against the front-on pose the intro video settles into: the letterforms
- * stay solid through their top three-quarters, then dissolve over the band
- * where the bodywork sits. Stopping short of fully transparent (0.06 alpha at
- * the base) leaves a whisper of the letter visible, which reads as light
- * catching the type through the scene rather than as a hard clipping edge.
+ * The outer span clips (overflow-hidden); the inner content starts translated
+ * fully below it and slides up to place. The bottom of the glyphs enters first
+ * and the line fills upward, the "reveal from the bottom" motion, and it never
+ * simply pops. Used for the eyebrow and each headline line so they arrive in
+ * sequence via the `delay`.
  */
-const HERO_OCCLUSION_MASK =
-  "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 66%, rgba(0,0,0,0.62) 86%, rgba(0,0,0,0.22) 100%)";
+function ClipReveal({ show, delay = 0, children }) {
+  return (
+    <span className="block overflow-hidden pb-[0.08em]">
+      <span
+        className="block transition-transform duration-[1100ms] ease-fonix"
+        style={{
+          transform: show ? "translateY(0)" : "translateY(110%)",
+          transitionDelay: `${delay}ms`,
+        }}
+      >
+        {children}
+      </span>
+    </span>
+  );
+}
 
 /**
  * Marks that the intro has already played in this browser tab.
@@ -300,7 +313,9 @@ export default function HeroSequence() {
           // Rounded to 3dp before storing: without it, every sub-pixel scroll
           // event would be a new float and re-render React continuously.
           setScrubProgress(Math.round(self.progress * 1000) / 1000);
-          setIsUiVisible(self.progress < 0.14);
+          // Clear the hero content quickly once scrolling starts, so it does
+          // not sit on top of the first scene caption (which begins at 0.10).
+          setIsUiVisible(self.progress < 0.05);
         },
       });
     }, container);
@@ -392,11 +407,10 @@ export default function HeroSequence() {
   const isIntro = phase === "intro";
   const caption = captionAt(scrubProgress);
 
-  // Depth: the wordmark drifts up and scales down as you scroll, while the car
-  // stays put. Different rates of change between two layers is the strongest
-  // depth cue available without a real cutout of the car.
-  const wordmarkShift = -scrubProgress * 130;
-  const wordmarkScale = 1 - scrubProgress * 0.12;
+  // Depth: the hero content drifts up as you scroll while the car stays put.
+  // Two layers changing at different rates is the strongest depth cue available
+  // without a real cutout of the car.
+  const heroShift = -scrubProgress * 90;
 
   return (
     <section
@@ -452,91 +466,76 @@ export default function HeroSequence() {
         className="pointer-events-none absolute inset-0 bg-gradient-to-b from-void/75 via-transparent to-void"
       />
 
-      {/* ---------- Layer 4: the title block ---------- */}
+      {/* ---------- Layer 4: hero content ---------- */}
       {/*
-        DEPTH.
+        An editorial, bottom-left composition rather than a centred wordmark.
+        Real marque sites (Porsche, Lamborghini) anchor a headline and a single
+        clear call to action to one corner over a full-bleed car, instead of
+        floating a logo and a tagline dead-centre. The tagline is now the
+        HEADLINE, set in the display face and given supporting copy, so it reads
+        as a statement about the car rather than a caption drifting in space.
 
-        True occlusion would need an alpha cutout of the car, and these assets
-        cannot give us one -- the car and the studio are both near-black, so no
-        luminance threshold separates them (89% of pixels sit below 64).
-
-        So the depth is faked with two cues that need no cutout:
-
-          1. A mask that fades the bottom of the letterforms out exactly where
-             the car's bonnet crosses them. The eye reads the missing section as
-             the car passing in front of the type.
-          2. Parallax -- the wordmark drifts up and shrinks as you scroll while
-             the footage stays put. Two layers changing at different rates is
-             the strongest depth cue available.
-
-        The mask is only applied once the intro video has finished. During the
-        video the car is moving, so a fixed mask would not line up with
-        anything; at the end it settles into the front-on pose the mask is cut
-        for. The wordmark appearing to sink behind the car as the intro lands is
-        the nicest moment in the sequence.
+        Each line rises out of its own clip window on reveal (the motion that
+        was liked), and the whole block drifts up slightly with scroll for
+        depth before the scene captions take over.
       */}
       <div
-        className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6"
+        className="pointer-events-none absolute inset-0 flex items-end"
         style={{
-          transform: `translateY(${wordmarkShift}px) scale(${wordmarkScale})`,
+          transform: `translateY(${heroShift}px)`,
           willChange: "transform",
         }}
       >
-        <div className="flex flex-col items-center text-center">
-          {/*
-            The only place Anton appears on the whole site. Spending the display
-            face in exactly one moment is what gives it weight; on every heading
-            it would just be a loud font.
-
-            THE REVEAL. The word rises up out of a clipping window rather than
-            just fading in. The outer span has overflow:hidden, and the h1
-            starts translated fully below it (translate-y-full) so it is out of
-            frame; on reveal it slides up to translate-y-0. The bottom of the
-            letters enters first and the word fills upward, which is the
-            "fade in from its bottom" motion, and it never simply pops.
-
-            leading-none, not tighter: Anton's glyphs are taller than their em
-            box, and a line height below 1 lets the tagline sit close beneath.
-          */}
-          <span className="block overflow-hidden pb-[0.12em]">
-            <h1
-              className="font-display leading-none tracking-[0.02em] text-white transition-transform duration-[1300ms] ease-fonix"
-              style={{
-                fontSize: "clamp(3.5rem, 1rem + 15vw, 13rem)",
-                transform: isUiVisible
-                  ? "translateY(0)"
-                  : "translateY(105%)",
-                // The occlusion mask is applied ALWAYS, not switched on when the
-                // intro ends. Switching it produced a visible pop; leaving it on
-                // simply softens the base of the letters over the footage the
-                // whole time, which is what we want.
-                maskImage: HERO_OCCLUSION_MASK,
-                WebkitMaskImage: HERO_OCCLUSION_MASK,
-              }}
-            >
-              FONIX
-            </h1>
-          </span>
-
-          {/* Tagline and buttons follow a beat later with a soft rise, so the
-              group arrives in sequence rather than all at once. */}
+        <div className="fx-container w-full pb-20 md:pb-28">
           <div
-            className={`flex flex-col items-center transition-all duration-1000 ease-fonix ${
-              isUiVisible
-                ? "translate-y-0 opacity-100 delay-200"
-                : "pointer-events-none translate-y-4 opacity-0"
+            className={`max-w-3xl transition-opacity duration-500 ${
+              isUiVisible ? "opacity-100" : "opacity-0"
             }`}
           >
-            <p className="mt-5 font-body text-[0.65rem] uppercase tracking-[0.42em] text-white/70 md:mt-7 md:text-sm">
-              The future, ignited
+            <ClipReveal show={isUiVisible}>
+              <p className="fx-eyebrow">The FoNix Ignis &middot; Flagship</p>
+            </ClipReveal>
+
+            {/*
+              Anton, the one display moment on the site, now carries real
+              headline copy. Two lines, each rising from its own clip window,
+              with the payoff word in ember.
+            */}
+            <h1
+              className="mt-4 font-display uppercase leading-[0.9] tracking-[0.01em] text-white"
+              style={{ fontSize: "clamp(2.75rem, 1rem + 8.5vw, 7.5rem)" }}
+            >
+              <ClipReveal show={isUiVisible} delay={80}>
+                <span className="block">The future,</span>
+              </ClipReveal>
+              <ClipReveal show={isUiVisible} delay={160}>
+                <span className="block text-ember">ignited.</span>
+              </ClipReveal>
+            </h1>
+
+            <p
+              className={`mt-6 max-w-xl font-body text-sm leading-relaxed text-white/70 transition-all duration-1000 ease-fonix md:text-base ${
+                isUiVisible
+                  ? "translate-y-0 opacity-100 delay-300"
+                  : "translate-y-4 opacity-0"
+              }`}
+            >
+              Four independent motors. 412 km/h. Not a decibel of engine noise.
+              The car every other FoNix is measured against.
             </p>
 
-            <div className="pointer-events-auto mt-9 flex flex-col gap-3 sm:flex-row md:mt-11">
+            <div
+              className={`pointer-events-auto mt-9 flex flex-col gap-3 sm:flex-row sm:items-center transition-all duration-1000 ease-fonix ${
+                isUiVisible
+                  ? "translate-y-0 opacity-100 delay-[420ms]"
+                  : "translate-y-4 opacity-0"
+              }`}
+            >
               <Button to="/store/ignis" size="lg">
-                Meet the Ignis
+                Explore the Ignis
               </Button>
               <Button to="/store" variant="ghost" size="lg">
-                The full range
+                See all six models
               </Button>
             </div>
           </div>

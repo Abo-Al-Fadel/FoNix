@@ -73,10 +73,15 @@ export default function Navbar() {
         }
         animate={{ clipPath: "inset(0% 0% 0% 0% round 999px)" }}
         transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
-        className={`pointer-events-auto flex w-full max-w-5xl items-center rounded-full border transition-colors duration-500 ${
+        // A darker, more present glass than before: a real tinted panel with a
+        // clear hairline and a soft drop shadow, not a barely-there wash. It
+        // deepens further once you scroll off the hero. `backdrop-saturate`
+        // makes the ember background glow read through it, which is what stops
+        // it looking like flat grey plastic.
+        className={`pointer-events-auto flex w-full max-w-5xl items-center rounded-full border shadow-[0_10px_40px_-12px_rgba(0,0,0,0.7)] backdrop-blur-2xl backdrop-saturate-150 transition-colors duration-500 ${
           isScrolled
-            ? "border-white/15 bg-white/[0.07] backdrop-blur-xl"
-            : "border-hairline bg-glass backdrop-blur-xl"
+            ? "border-white/15 bg-[rgba(9,11,16,0.78)]"
+            : "border-white/12 bg-[rgba(9,11,16,0.5)]"
         } py-2 pl-5 pr-2 md:pl-6`}
       >
         <Link

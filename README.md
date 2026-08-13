@@ -148,22 +148,24 @@ is no second copy to drift out of sync.
 These were open questions or judgement calls. Each is documented in the code at
 the point it applies; this is the summary.
 
-### Non-flagship models have generated artwork, not borrowed photographs
+### Every model has real imagery, and each car is visually distinct
 
-Only the flagship Ignis has real imagery, taken from the source footage. The
-other five models (Aurea, Cinder, Vesper, Lumen, Atlas) are shown with
-generated brand artwork - a dark studio composition carrying an oversized FoNix
-mark - and a **"visualisation pending"** badge on both the catalog card and the
-product page.
+The flagship Ignis uses stills pulled from the hero frame sequence. The other
+five (Aurea, Cinder, Vesper, Lumen, Atlas) use generated studio photography,
+each with a distinct character so they never look like the same car relabelled:
+the Aurea a champagne-graphite grand tourer, the Cinder a matte-black track car
+with a carbon wing, the Vesper a four-door saloon, the Atlas a raised off-road
+SUV, the Lumen a lighter compact coupe.
 
-Reusing the Ignis's photographs relabelled as other cars would read as an
-obvious content bug to anyone browsing the store. A plain grey box would read as
-broken. The generated art is unmistakably a design placeholder, stays inside the
-brand, and says what it is. See
-`backend/cars/management/commands/_placeholder_art.py`.
+The generation prompts are kept in [IMAGE_PROMPTS.md](IMAGE_PROMPTS.md); the raw
+outputs are optimised to ~65 KB WebPs by `tools/process_product_images.py` and
+committed under `frontend/public/product/`, which the Django `seed_catalog`
+command reads from.
 
-All six remain purchasable so the cart and checkout flow can be exercised with
-more than one model.
+The seed command still supports a stylised placeholder path
+(`backend/cars/management/commands/_placeholder_art.py`) for any future model
+added before its photography exists, so the store never has to show a broken or
+borrowed image.
 
 ### The logo was vectorised, not traced by eye
 

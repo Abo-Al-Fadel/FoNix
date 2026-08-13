@@ -55,6 +55,20 @@ export default function About() {
           </dl>
         </Reveal>
 
+        {/* --- Atmospheric hangar band --- */}
+        <Reveal className="mt-12">
+          <figure className="fx-sheen overflow-hidden rounded-card border border-hairline">
+            <img
+              src="/brand/hangar.webp"
+              alt="The interior of the converted aircraft hangar outside Bristol where FoNix builds, a single car under a pool of overhead light in a vast dark space."
+              width={1600}
+              height={900}
+              loading="lazy"
+              className="aspect-video w-full object-cover"
+            />
+          </figure>
+        </Reveal>
+
         {/* --- Why fictional --- */}
         <section className="fx-section border-b border-hairline">
           <div className="grid items-center gap-12 md:grid-cols-[auto_1fr] md:gap-16">

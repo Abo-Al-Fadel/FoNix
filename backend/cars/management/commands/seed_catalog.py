@@ -30,6 +30,11 @@ from ._placeholder_art import render_placeholder
 # ONE canonical set of frames in the repo, not two that can drift apart.
 DEFAULT_ASSET_DIR = Path(settings.BASE_DIR).parent / "frontend" / "public" / "frames"
 
+# The five non-flagship models have real (generated) studio photography, one
+# optimised WebP hero + one gallery shot each, committed under the frontend's
+# public folder. Same "one canonical home" principle as the frames above.
+PRODUCT_DIR = Path(settings.BASE_DIR).parent / "frontend" / "public" / "product"
+
 # Which frames of the 215-frame orbit sequence become the flagship's product
 # stills. They are all genuinely different views of the same car, which is
 # exactly what a product gallery should be.
@@ -88,8 +93,11 @@ CATALOG = [
         "top_speed_kmh": 330,
         "acceleration_0_100": Decimal("2.90"),
         "is_hero": False,
-        "has_real_imagery": False,
-        "art": {"scale": 0.58, "centre_x": 0.46, "glow": 0.55},
+        "has_real_imagery": True,
+        "photos": {
+            "thumbnail_alt": "The FoNix Aurea grand tourer in champagne-graphite, front three-quarter view in a dark studio.",
+            "gallery_alt": "The FoNix Aurea seen along its long grand-touring flank.",
+        },
     },
     {
         "name": "FoNix Cinder",
@@ -108,8 +116,11 @@ CATALOG = [
         "top_speed_kmh": 380,
         "acceleration_0_100": Decimal("2.30"),
         "is_hero": False,
-        "has_real_imagery": False,
-        "art": {"scale": 0.74, "centre_x": 0.56, "centre_y": 0.44, "glow": 0.35},
+        "has_real_imagery": True,
+        "photos": {
+            "thumbnail_alt": "The FoNix Cinder track car in matte black with a fixed carbon rear wing, front three-quarter view.",
+            "gallery_alt": "The FoNix Cinder from the rear three-quarter, showing its carbon wing and diffuser.",
+        },
     },
     {
         "name": "FoNix Vesper",
@@ -128,8 +139,11 @@ CATALOG = [
         "top_speed_kmh": 290,
         "acceleration_0_100": Decimal("3.40"),
         "is_hero": False,
-        "has_real_imagery": False,
-        "art": {"scale": 0.5, "centre_x": 0.5, "centre_y": 0.52, "glow": 0.62},
+        "has_real_imagery": True,
+        "photos": {
+            "thumbnail_alt": "The FoNix Vesper four-door electric saloon, front three-quarter view in a dark studio.",
+            "gallery_alt": "The FoNix Vesper in profile, showing all four doors and its long saloon roofline.",
+        },
     },
     {
         "name": "FoNix Lumen",
@@ -149,8 +163,11 @@ CATALOG = [
         "top_speed_kmh": 250,
         "acceleration_0_100": Decimal("4.10"),
         "is_hero": False,
-        "has_real_imagery": False,
-        "art": {"scale": 0.44, "centre_x": 0.42, "centre_y": 0.5, "glow": 0.48},
+        "has_real_imagery": True,
+        "photos": {
+            "thumbnail_alt": "The FoNix Lumen compact electric coupe in gunmetal grey, front three-quarter view.",
+            "gallery_alt": "The FoNix Lumen in profile, showing its compact lightweight proportions.",
+        },
     },
     {
         "name": "FoNix Atlas",
@@ -170,8 +187,11 @@ CATALOG = [
         "top_speed_kmh": 230,
         "acceleration_0_100": Decimal("3.80"),
         "is_hero": False,
-        "has_real_imagery": False,
-        "art": {"scale": 0.66, "centre_x": 0.52, "centre_y": 0.46, "glow": 0.4},
+        "has_real_imagery": True,
+        "photos": {
+            "thumbnail_alt": "The FoNix Atlas raised electric SUV on chunky off-road tyres, front three-quarter view.",
+            "gallery_alt": "The FoNix Atlas from the side, showing its ground clearance and rugged stance.",
+        },
     },
 ]
 
@@ -227,7 +247,9 @@ class Command(BaseCommand):
         self.stdout.write(f"Removed {deleted} existing catalog rows.")
 
     def _seed_car(self, entry: dict, frames: Path):
-        data = {k: v for k, v in entry.items() if k != "art"}
+        # `art` and `photos` are seeding instructions, not model fields, so they
+        # are stripped before building the CarModel.
+        data = {k: v for k, v in entry.items() if k not in ("art", "photos")}
         slug = data.pop("slug")
 
         # update_or_create makes the command idempotent: running it twice
@@ -239,15 +261,56 @@ class Command(BaseCommand):
         # accumulate duplicate gallery rows.
         car.images.all().delete()
 
-        if entry["has_real_imagery"]:
-            self._attach_real_imagery(car, frames)
+        # Three imagery paths: the flagship uses stills pulled from the hero
+        # frame sequence; the other five now have real generated photography;
+        # anything still flagged False would fall back to placeholder art.
+        if slug == "ignis":
+            self._attach_flagship_frames(car, frames)
+        elif entry["has_real_imagery"]:
+            self._attach_photo_set(car, slug, entry["photos"])
         else:
             self._attach_placeholder_art(car, entry.get("art", {}))
 
         verb = "Created" if created else "Updated"
         self.stdout.write(f"  {verb} {car.name} ({car.images.count()} gallery images)")
 
-    def _attach_real_imagery(self, car: CarModel, frames: Path):
+    def _attach_photo_set(self, car: CarModel, slug: str, photos: dict):
+        """
+        Attach a car's real studio photography: a hero (also the thumbnail) and
+        one gallery shot, both optimised WebPs under frontend/public/product/.
+        """
+        car_dir = PRODUCT_DIR / slug
+        hero = car_dir / "hero.webp"
+        gallery = car_dir / "gallery-1.webp"
+
+        if not hero.exists():
+            raise CommandError(
+                f"Missing hero image for {car.name}: {hero}. "
+                "Run tools/process_product_images.py first."
+            )
+
+        car.thumbnail.save(
+            f"{slug}-hero.webp", ContentFile(hero.read_bytes()), save=False
+        )
+        car.thumbnail_alt = photos["thumbnail_alt"]
+        car.save()
+
+        # The hero is also the first gallery image, so the product page opens on
+        # the same shot the card showed, then the second angle follows.
+        stills = [(hero, photos["thumbnail_alt"])]
+        if gallery.exists():
+            stills.append((gallery, photos["gallery_alt"]))
+
+        for order, (path, alt_text) in enumerate(stills):
+            image = CarImage(car=car, alt_text=alt_text, display_order=order)
+            image.image.save(
+                f"{slug}-{order + 1:02d}.webp",
+                ContentFile(path.read_bytes()),
+                save=False,
+            )
+            image.save()
+
+    def _attach_flagship_frames(self, car: CarModel, frames: Path):
         thumbnail_path = frames / FLAGSHIP_THUMBNAIL
         if not thumbnail_path.exists():
             raise CommandError(f"Missing flagship thumbnail frame: {thumbnail_path}")

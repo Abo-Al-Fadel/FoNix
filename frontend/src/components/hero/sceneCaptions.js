@@ -10,8 +10,8 @@
  */
 export const SCENE_CAPTIONS = [
   {
-    from: 0.04,
-    to: 0.24,
+    from: 0.1,
+    to: 0.26,
     eyebrow: "Exterior",
     title: "One unbroken line",
     body: "The light blade runs from the front splitter to the rear diffuser without a single join. It is difficult to tool, expensive to align, and impossible to unsee.",

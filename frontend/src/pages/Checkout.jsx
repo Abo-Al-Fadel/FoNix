@@ -75,7 +75,7 @@ export default function Checkout() {
               Order summary
             </h2>
 
-            <ul className="mt-6 list-none divide-y divide-hairline rounded-3xl border border-hairline bg-graphite/50">
+            <ul className="mt-6 list-none divide-y divide-hairline rounded-card border border-hairline bg-graphite/50">
               {lines.map((line) => (
                 <li
                   key={line.slug}
@@ -86,7 +86,7 @@ export default function Checkout() {
                     alt={line.thumbnailAlt ?? line.name}
                     width={1600}
                     height={900}
-                    className="aspect-16/9 w-24 shrink-0 rounded-xl object-cover sm:w-32"
+                    className="aspect-16/9 w-24 shrink-0 rounded-input object-cover sm:w-32"
                   />
                   <div className="min-w-0 flex-1">
                     <p className="font-heading text-base font-bold text-white">
@@ -103,7 +103,7 @@ export default function Checkout() {
               ))}
             </ul>
 
-            <div className="mt-8 rounded-3xl border border-hairline bg-graphite/50 p-6">
+            <div className="mt-8 rounded-card border border-hairline bg-graphite/50 p-6">
               <h3 className="font-body text-xs uppercase tracking-[0.16em] text-faint">
                 Delivering to
               </h3>
@@ -113,14 +113,14 @@ export default function Checkout() {
               <p className="font-body text-sm text-muted">{user?.email}</p>
               <p className="mt-4 font-body text-xs leading-relaxed text-faint">
                 A real store would collect a delivery address and payment here.
-                Both are deliberately out of scope for this build — see the
+                Both are deliberately out of scope for this build. See the
                 README.
               </p>
             </div>
           </section>
 
           <aside className="lg:sticky lg:top-32 lg:self-start">
-            <div className="rounded-3xl border border-hairline bg-graphite/50 p-6 md:p-7">
+            <div className="rounded-card border border-hairline bg-graphite/50 p-6 md:p-7">
               <div className="flex items-baseline justify-between">
                 <span className="font-body text-xs uppercase tracking-[0.16em] text-faint">
                   Total
@@ -164,7 +164,7 @@ function OrderConfirmation({ order }) {
       />
 
       <div className="fx-container">
-        <div className="max-w-2xl rounded-3xl border border-hairline bg-graphite/50 p-6 md:p-8">
+        <div className="max-w-2xl rounded-card border border-hairline bg-graphite/50 p-6 md:p-8">
           <dl className="grid grid-cols-2 gap-6 border-b border-hairline pb-6 font-body text-sm">
             <div>
               <dt className="text-xs uppercase tracking-[0.16em] text-faint">

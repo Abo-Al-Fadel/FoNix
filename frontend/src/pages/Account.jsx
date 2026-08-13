@@ -49,7 +49,7 @@ export default function Account() {
             {orders.map((order) => (
               <li
                 key={order.id}
-                className="rounded-3xl border border-hairline bg-graphite/50 p-6 md:p-7"
+                className="rounded-card border border-hairline bg-graphite/50 p-6 md:p-7"
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-4 border-b border-hairline pb-5">
                   <div>
@@ -80,7 +80,7 @@ export default function Account() {
                           src={item.car_thumbnail}
                           alt=""
                           loading="lazy"
-                          className="aspect-16/9 w-20 shrink-0 rounded-lg object-cover sm:w-24"
+                          className="aspect-16/9 w-20 shrink-0 rounded-input object-cover sm:w-24"
                         />
                       ) : null}
                       <div className="min-w-0 flex-1">

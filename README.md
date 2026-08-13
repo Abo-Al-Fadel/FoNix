@@ -4,7 +4,7 @@ A fictional electric-hypercar marque, built as a full-stack learning and
 portfolio project: a Django REST Framework API and a React front end, joined
 by a scroll-driven cinematic homepage.
 
-FoNix is invented. That is deliberate — putting a real manufacturer's
+FoNix is invented. That is deliberate - putting a real manufacturer's
 trademarked name and design language on a public portfolio would be borrowing
 someone else's intellectual property rather than demonstrating anything.
 
@@ -14,7 +14,8 @@ someone else's intellectual property rather than demonstrating anything.
 |---|---|
 | **README.md** (this file) | How to run it, the API, the design decisions |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | A request traced end to end; the data model and every security measure explained |
-| [LEARNING.md](LEARNING.md) | Nine hands-on Django exercises with exact commands — start here if you're learning |
+| [LEARNING.md](LEARNING.md) | Nine hands-on Django exercises with exact commands - start here if you're learning |
+| [DATABASE.md](DATABASE.md) | What database you're using, SQLite vs Postgres, how to switch, fix and reset it, and how to reach the Django admin |
 | [REVIEW_NOTES.md](REVIEW_NOTES.md) | Bugs found and fixed, and the results of an adversarial security probe |
 
 ### Verified
@@ -36,7 +37,7 @@ python -m venv backend_venv
 backend_venv/Scripts/pip install -r backend/requirements.txt   # Linux/macOS: backend_venv/bin/pip
 
 cd backend
-cp .env.example .env          # then set SECRET_KEY — see the file for how
+cp .env.example .env          # then set SECRET_KEY - see the file for how
 python manage.py migrate
 python manage.py seed_catalog # populates the six models and their imagery
 python manage.py createsuperuser
@@ -47,8 +48,8 @@ The API is then at `http://127.0.0.1:8000/api/`, the Django admin at
 `http://127.0.0.1:8000/admin/`.
 
 `createsuperuser` does not ask for the custom `role` field, so a new superuser
-has `role="customer"`. That is handled — `User.is_fonix_admin` treats
-superusers as admins regardless — but to give an ordinary account staff rights,
+has `role="customer"`. That is handled - `User.is_fonix_admin` treats
+superusers as admins regardless - but to give an ordinary account staff rights,
 set its role to **Admin** in the Django admin.
 
 ### Frontend
@@ -84,7 +85,7 @@ files into `backend/media/`.
 ### End-to-end browser checklist
 
 `tools/e2e-checklist.mjs` drives a real Chromium session through the full
-user journey — hero timing and scroll lock, reduced motion, the store, the
+user journey - hero timing and scroll lock, reduced motion, the store, the
 cart's localStorage persistence, register/login, checkout, order history,
 the admin-permission boundary, the mobile viewport, and console cleanliness.
 It needs both servers running:
@@ -96,7 +97,7 @@ node tools/e2e-checklist.mjs
 
 It prints PASS/FAIL per item and exits non-zero on any failure. Note that the
 contact-form checks consume part of the endpoint's 5/hour rate limit, so
-back-to-back runs will legitimately hit a 429 — restart the Django server to
+back-to-back runs will legitimately hit a 429 - restart the Django server to
 reset the in-memory throttle counter.
 
 ---
@@ -116,9 +117,14 @@ frontend/           React + Vite SPA
   src/context/      auth and cart providers
   src/components/   layout, hero, store, ui primitives
   src/pages/        one file per route
-tools/              asset build scripts (logo rasters, mobile frame set)
-fonix_assest/       source material: intro video, 215 frames, logo concept
+tools/              build + test scripts (logo rasters, mobile frames, e2e, security)
+assets/brand/       the raw logo concept the production vector was traced from
 ```
+
+The 215-frame hero sequence and the intro video live (committed) under
+`frontend/public/`, which is the single canonical home for both. The Django
+`seed_catalog` command reads the flagship's stills straight from there, so there
+is no second copy to drift out of sync.
 
 ### API
 
@@ -145,9 +151,9 @@ the point it applies; this is the summary.
 ### Non-flagship models have generated artwork, not borrowed photographs
 
 Only the flagship Ignis has real imagery, taken from the source footage. The
-The other five models (Aurea, Cinder, Vesper, Lumen, Atlas) are shown with
-generated brand artwork — a dark studio composition carrying an oversized FoNix
-mark — and a **"visualisation pending"** badge on both the catalog card and the
+other five models (Aurea, Cinder, Vesper, Lumen, Atlas) are shown with
+generated brand artwork - a dark studio composition carrying an oversized FoNix
+mark - and a **"visualisation pending"** badge on both the catalog card and the
 product page.
 
 Reusing the Ignis's photographs relabelled as other cars would read as an
@@ -161,10 +167,10 @@ more than one model.
 
 ### The logo was vectorised, not traced by eye
 
-`fonix_assest/LOGO.jpeg` is a raster concept. It was converted to a production
+`assets/brand/logo-concept-raw.jpeg` is a raster concept. It was converted to a production
 vector by thresholding the image to a binary mask, walking the boundary with a
 marching-squares edge trace, and simplifying the outline with Douglas-Peucker.
-The mark turned out to be two straight-edged blades of 6 and 5 points — so the
+The mark turned out to be two straight-edged blades of 6 and 5 points - so the
 SVG carries the real geometry rather than an approximation of it, and stays
 crisp at 16px.
 
@@ -189,7 +195,7 @@ alone still leaves ~6MB:
 | Resolution | 1600×900 | 800×450 |
 | Payload | ~12MB | **1.44MB** |
 
-That keeps the real scroll-scrub — the thing actually worth showing — rather
+That keeps the real scroll-scrub - the thing actually worth showing - rather
 than degrading it to a cross-fade, while cutting the download by 88%. Rebuild
 the mobile set with `tools/build_mobile_frames.py`.
 
@@ -201,7 +207,7 @@ cannot read would make the role pointless. Customers are scoped in the queryset
 itself (`OrderQuerySet.for_user`), not by a filter applied afterwards, so the
 restriction cannot be bypassed by any action on the ViewSet.
 
-Requesting another customer's order returns **404, not 403** — a 403 would
+Requesting another customer's order returns **404, not 403** - a 403 would
 confirm that the order exists, which a stranger has no business learning.
 
 ### Order prices are snapshotted server-side
@@ -215,13 +221,13 @@ does not silently rewrite historical orders. Both are covered by tests.
 
 `Order.user` and `OrderItem.car` are `PROTECT`. Deleting a user account or
 retiring a car from the catalog must never cascade away the financial record of
-a sale that really happened — it raises instead, forcing a deliberate decision.
+a sale that really happened - it raises instead, forcing a deliberate decision.
 `CarImage.car` and `OrderItem.order` are `CASCADE`, because a gallery image and
 a line item have no existence independent of their parent.
 
 ### Tokens live in localStorage
 
-Readable by any script on the page, so an XSS bug leaks them — an httpOnly
+Readable by any script on the page, so an XSS bug leaks them - an httpOnly
 cookie would not. Cookies would in turn need CSRF handling and a shared parent
 domain, which a decoupled SPA on a different origin does not have. For this
 project localStorage is the right trade, and the 30-minute access token limits
@@ -242,7 +248,7 @@ for hover, hairlines, focus rings and large type.
 
 ## Deliberately out of scope
 
-Not omissions — decisions, recorded so they read as such:
+Not omissions - decisions, recorded so they read as such:
 
 - **Payment processing.** Checkout records an order and takes no money.
 - **Deployment.** Local development only. `config/settings/production.py`

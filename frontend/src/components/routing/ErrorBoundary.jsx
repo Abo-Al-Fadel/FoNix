@@ -56,7 +56,7 @@ export default class ErrorBoundary extends Component {
         {/* The message is genuinely useful while developing and harmless in a
             portfolio piece. A commercial app would hide it behind a check on
             import.meta.env.DEV. */}
-        <pre className="max-w-xl overflow-x-auto rounded-xl border border-hairline bg-graphite/60 p-4 text-left font-mono text-xs text-muted">
+        <pre className="max-w-xl overflow-x-auto rounded-input border border-hairline bg-graphite/60 p-4 text-left font-mono text-xs text-muted">
           {String(error?.message ?? error)}
         </pre>
 

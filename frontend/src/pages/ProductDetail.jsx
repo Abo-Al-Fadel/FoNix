@@ -84,7 +84,7 @@ export default function ProductDetail() {
         <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
           {/* ---------------- Gallery ---------------- */}
           <div>
-            <div className="overflow-hidden rounded-3xl border border-hairline bg-graphite/60">
+            <div className="overflow-hidden rounded-card border border-hairline bg-graphite/60">
               <img
                 src={gallery[activeImage].image}
                 alt={gallery[activeImage].alt_text}
@@ -113,7 +113,7 @@ export default function ProductDetail() {
                     onClick={() => setActiveImage(index)}
                     aria-pressed={index === activeImage}
                     aria-label={`View image ${index + 1} of ${gallery.length}`}
-                    className={`overflow-hidden rounded-xl border transition-colors duration-300 ${
+                    className={`overflow-hidden rounded-input border transition-colors duration-300 ${
                       index === activeImage
                         ? "border-ember"
                         : "border-hairline hover:border-white/30"

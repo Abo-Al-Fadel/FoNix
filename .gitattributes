@@ -37,4 +37,3 @@ package-lock.json linguist-generated=true
 # The hero frame sequence is source material, not code we wrote. Excluding it
 # from language stats stops GitHub reporting this repo as mostly images.
 frontend/public/frames/** linguist-vendored=true
-fonix_assest/** linguist-vendored=true

@@ -91,7 +91,7 @@ export default function Footer() {
                     // assistive tech the same thing the cursor tells everyone
                     // else.
                     aria-disabled="true"
-                    aria-label={`${social.label} (placeholder — FoNix is a fictional marque)`}
+                    aria-label={`${social.label} (placeholder, FoNix is a fictional marque)`}
                     onClick={(event) => event.preventDefault()}
                     className="flex h-11 w-11 items-center justify-center rounded-full border border-hairline text-muted transition-all duration-300 ease-fonix hover:-translate-y-0.5 hover:border-ember/50 hover:text-ember"
                   >
@@ -162,7 +162,7 @@ function NewsletterSignup() {
   const [submitted, setSubmitted] = useState(false);
 
   return (
-    <div className="mt-16 rounded-3xl border border-hairline bg-graphite/40 p-6 md:p-8">
+    <div className="mt-16 rounded-card border border-hairline bg-graphite/40 p-6 md:p-8">
       <div className="grid gap-6 md:grid-cols-[1.2fr_1fr] md:items-center md:gap-10">
         <div>
           <h2 className="font-heading text-lg font-bold text-white md:text-xl">
@@ -178,7 +178,7 @@ function NewsletterSignup() {
             role="status"
             className="font-body text-sm text-ember"
           >
-            Noted — though this is a demo, so nothing was actually sent.
+            Noted. This is a demo, so nothing was actually sent.
           </p>
         ) : (
           <form

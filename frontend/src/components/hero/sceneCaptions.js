@@ -28,7 +28,7 @@ export const SCENE_CAPTIONS = [
     to: 0.68,
     eyebrow: "Access",
     title: "Dihedral doors, electrically actuated",
-    body: "Each door lifts on a single motorised strut in 1.2 seconds, clearing the sill entirely. There is no handle to pull — the car recognises the key and opens as you reach it.",
+    body: "Each door lifts on a single motorised strut in 1.2 seconds, clearing the sill entirely. There is no handle to pull - the car recognises the key and opens as you reach it.",
   },
   {
     from: 0.72,

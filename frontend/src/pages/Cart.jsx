@@ -39,11 +39,11 @@ export default function Cart() {
             {lines.map((line) => (
               <li
                 key={line.slug}
-                className="flex flex-col gap-5 rounded-3xl border border-hairline bg-graphite/50 p-4 sm:flex-row sm:items-center sm:p-5"
+                className="flex flex-col gap-5 rounded-card border border-hairline bg-graphite/50 p-4 sm:flex-row sm:items-center sm:p-5"
               >
                 <Link
                   to={`/store/${line.slug}`}
-                  className="shrink-0 overflow-hidden rounded-2xl"
+                  className="shrink-0 overflow-hidden rounded-card"
                 >
                   <img
                     src={line.thumbnail}
@@ -132,7 +132,7 @@ export default function Cart() {
           {/* Summary. Sticky on desktop so the total stays in view while
               scrolling a long list; static on mobile where there is no room. */}
           <aside className="lg:sticky lg:top-32 lg:self-start">
-            <div className="rounded-3xl border border-hairline bg-graphite/50 p-6 md:p-7">
+            <div className="rounded-card border border-hairline bg-graphite/50 p-6 md:p-7">
               <h2 className="font-heading text-lg font-bold text-white">
                 Summary
               </h2>

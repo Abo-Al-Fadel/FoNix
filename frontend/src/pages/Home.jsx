@@ -19,7 +19,7 @@ const PRINCIPLES = [
   {
     number: "01",
     title: "Subtract, then subtract again",
-    body: "Every FoNix begins as a list of parts we are trying to delete. No gearbox, no driveshaft, no exhaust, no grille — the silhouette is simply what is left once none of those matter.",
+    body: "Every FoNix begins as a list of parts we are trying to delete. No gearbox, no driveshaft, no exhaust, no grille. The silhouette is simply what is left once none of those matter.",
   },
   {
     number: "02",
@@ -44,7 +44,7 @@ export default function Home() {
   const fetcher = useCallback(() => fetchCars(), []);
   const { data: cars } = useApiResource(fetcher);
 
-  // A failed fetch degrades to simply not rendering the strip — the hero and
+  // A failed fetch degrades to simply not rendering the strip. The hero and
   // everything else still work, which beats an error on the landing page.
   const featured = cars?.slice(0, 3) ?? [];
 
@@ -111,8 +111,7 @@ export default function Home() {
             <Reveal delay={0.08}>
               <p className="font-body text-base leading-relaxed text-muted">
                 FoNix builds in a converted aircraft hangar outside Bristol.
-                Every car starts as a list of parts we are trying to delete —
-                and what survives that process is the car.
+                Every car starts as a list of parts we are trying to delete, and what survives that process is the car.
               </p>
             </Reveal>
             <Reveal delay={0.16}>
@@ -146,7 +145,7 @@ export default function Home() {
             {PRINCIPLES.map((principle) => (
               <RevealItem
                 key={principle.number}
-                className="group rounded-3xl border border-hairline bg-graphite/30 p-7 transition-colors duration-500 hover:border-white/20"
+                className="group rounded-card border border-hairline bg-graphite/30 p-7 transition-colors duration-500 hover:border-white/20"
               >
                 <p className="font-heading text-5xl font-bold text-white/10 transition-colors duration-500 group-hover:text-ember/25">
                   {principle.number}

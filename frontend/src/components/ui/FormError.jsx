@@ -12,7 +12,7 @@ export default function FormError({ children }) {
   return (
     <p
       role="alert"
-      className="rounded-xl border border-ember/40 bg-ember/10 px-4 py-3 font-body text-sm text-white"
+      className="rounded-input border border-ember/40 bg-ember/10 px-4 py-3 font-body text-sm text-white"
     >
       {children}
     </p>

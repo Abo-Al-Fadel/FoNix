@@ -27,7 +27,7 @@ NOTE ON THE MEDIA ASSETS
 The MIT licence above covers the source code in this repository.
 
 It does NOT automatically cover the video, the 215-frame image sequence, or the
-logo concept in `fonix_assest/` and `frontend/public/`. Those were generated
+logo concept under `frontend/public/` and `assets/brand/`. Those were generated
 for this project; if you reuse this repository, satisfy yourself that you have
 the right to redistribute those files, or replace them with your own.
 

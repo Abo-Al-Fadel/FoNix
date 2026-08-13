@@ -19,7 +19,7 @@ gsap.registerPlugin(ScrollTrigger);
  * Seconds into the intro video at which the title fades in.
  *
  * Timed to the moment the headlights come up, not to the instant the page
- * loads — that is what makes it read as "welcome" rather than as UI popping
+ * loads. That is what makes it read as "welcome" rather than as UI popping
  * over an unfinished animation. Re-timed from 2.2s to 1.4s for the 3.9s cut,
  * keeping it at roughly the same proportion through the clip.
  */
@@ -354,6 +354,23 @@ export default function HeroSequence() {
     const attempt = video.play();
     if (attempt?.catch) attempt.catch(() => finishIntro());
 
+    // Scroll-to-skip: an impatient visitor who tries to scroll during the
+    // locked intro should not feel stuck. Scrolling fast-forwards the clip
+    // (and keeps accelerating the more they scroll) rather than doing nothing,
+    // so their input is acknowledged instead of swallowed. This is why the
+    // SCROLL hint is shown from the very start, not only after the intro.
+    const onIntent = () => {
+      // Cap at 8x so it always feels like *their* scroll drove it forward,
+      // not like the intro just gave up and skipped.
+      video.playbackRate = Math.min(video.playbackRate + 1.6, 8);
+    };
+    window.addEventListener("wheel", onIntent, { passive: true });
+    window.addEventListener("touchmove", onIntent, { passive: true });
+    window.addEventListener("keydown", (e) => {
+      // Space / PageDown / ArrowDown are all "I want to scroll" signals.
+      if ([" ", "PageDown", "ArrowDown"].includes(e.key)) onIntent();
+    });
+
     // Safety net: if 'ended' never fires for any reason, release the lock
     // anyway. A hero that can trap the page is worse than one that ends early.
     const failsafe = window.setTimeout(finishIntro, 12000);
@@ -363,6 +380,8 @@ export default function HeroSequence() {
       video.removeEventListener("timeupdate", onTimeUpdate);
       video.removeEventListener("ended", finishIntro);
       video.removeEventListener("error", finishIntro);
+      window.removeEventListener("wheel", onIntent);
+      window.removeEventListener("touchmove", onIntent);
     };
   }, [skipIntro, finishIntro]);
 
@@ -463,53 +482,63 @@ export default function HeroSequence() {
           willChange: "transform",
         }}
       >
-        <div
-          className={`flex flex-col items-center text-center transition-all duration-1000 ease-fonix ${
-            isUiVisible
-              ? "translate-y-0 opacity-100"
-              : "pointer-events-none translate-y-5 opacity-0"
-          }`}
-        >
+        <div className="flex flex-col items-center text-center">
           {/*
             The only place Anton appears on the whole site. Spending the display
-            face in exactly one moment is what gives it weight -- on every
-            heading it would just be a loud font.
+            face in exactly one moment is what gives it weight; on every heading
+            it would just be a loud font.
+
+            THE REVEAL. The word rises up out of a clipping window rather than
+            just fading in. The outer span has overflow:hidden, and the h1
+            starts translated fully below it (translate-y-full) so it is out of
+            frame; on reveal it slides up to translate-y-0. The bottom of the
+            letters enters first and the word fills upward, which is the
+            "fade in from its bottom" motion, and it never simply pops.
 
             leading-none, not tighter: Anton's glyphs are taller than their em
-            box, and a line-height below 1 lets the tagline render inside the
-            letterforms.
+            box, and a line height below 1 lets the tagline sit close beneath.
           */}
-          <h1
-            className="font-display leading-none tracking-[0.02em] text-white transition-[mask-image] duration-1000"
-            style={{
-              fontSize: "clamp(3.5rem, 1rem + 15vw, 13rem)",
-              // Deliberately NO text-shadow. A mask clips the shadow at the
-              // element's box, which draws a visible rectangle around the
-              // wordmark -- the glow fades out but its bounding box does not.
-              // The vignette already provides the separation the shadow was
-              // there for.
-              ...(isIntro
-                ? {}
-                : {
-                    maskImage: HERO_OCCLUSION_MASK,
-                    WebkitMaskImage: HERO_OCCLUSION_MASK,
-                  }),
-            }}
+          <span className="block overflow-hidden pb-[0.12em]">
+            <h1
+              className="font-display leading-none tracking-[0.02em] text-white transition-transform duration-[1300ms] ease-fonix"
+              style={{
+                fontSize: "clamp(3.5rem, 1rem + 15vw, 13rem)",
+                transform: isUiVisible
+                  ? "translateY(0)"
+                  : "translateY(105%)",
+                // The occlusion mask is applied ALWAYS, not switched on when the
+                // intro ends. Switching it produced a visible pop; leaving it on
+                // simply softens the base of the letters over the footage the
+                // whole time, which is what we want.
+                maskImage: HERO_OCCLUSION_MASK,
+                WebkitMaskImage: HERO_OCCLUSION_MASK,
+              }}
+            >
+              FONIX
+            </h1>
+          </span>
+
+          {/* Tagline and buttons follow a beat later with a soft rise, so the
+              group arrives in sequence rather than all at once. */}
+          <div
+            className={`flex flex-col items-center transition-all duration-1000 ease-fonix ${
+              isUiVisible
+                ? "translate-y-0 opacity-100 delay-200"
+                : "pointer-events-none translate-y-4 opacity-0"
+            }`}
           >
-            FONIX
-          </h1>
+            <p className="mt-5 font-body text-[0.65rem] uppercase tracking-[0.42em] text-white/70 md:mt-7 md:text-sm">
+              The future, ignited
+            </p>
 
-          <p className="mt-5 font-body text-[0.65rem] uppercase tracking-[0.42em] text-white/70 md:mt-7 md:text-sm">
-            The future, ignited
-          </p>
-
-          <div className="pointer-events-auto mt-9 flex flex-col gap-3 sm:flex-row md:mt-11">
-            <Button to="/store/ignis" size="lg">
-              Meet the Ignis
-            </Button>
-            <Button to="/store" variant="ghost" size="lg">
-              The full range
-            </Button>
+            <div className="pointer-events-auto mt-9 flex flex-col gap-3 sm:flex-row md:mt-11">
+              <Button to="/store/ignis" size="lg">
+                Meet the Ignis
+              </Button>
+              <Button to="/store" variant="ghost" size="lg">
+                The full range
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -555,17 +584,22 @@ export default function HeroSequence() {
       ) : null}
 
       {/* ---------- Layer 6: scroll hint ---------- */}
+      {/*
+        Shown from the very beginning, including during the locked intro. That
+        is deliberate: scrolling during the intro fast-forwards it (see the
+        wheel/touch listener above), so the hint is an honest invitation rather
+        than a lie about what scrolling does. It appears together with the
+        title and only fades once the scrub has actually begun.
+      */}
       {!prefersReducedMotion ? (
         <div
           aria-hidden="true"
           className={`pointer-events-none absolute inset-x-0 bottom-8 flex flex-col items-center gap-3 transition-opacity duration-700 ${
-            !isIntro && framesReady && scrubProgress < 0.03
-              ? "opacity-100"
-              : "opacity-0"
+            isUiVisible && scrubProgress < 0.03 ? "opacity-100" : "opacity-0"
           }`}
         >
           <span className="font-body text-[10px] uppercase tracking-[0.34em] text-white/40">
-            Scroll
+            {isIntro ? "Scroll to skip" : "Scroll"}
           </span>
           <span className="relative block h-10 w-px overflow-hidden bg-white/15">
             <span className="fx-scroll-tick absolute inset-x-0 top-0 block h-4 bg-ember" />

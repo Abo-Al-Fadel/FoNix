@@ -1,6 +1,6 @@
 # Learning Django with this project
 
-Nine exercises, in order. Each one is a thing you *do*, not a thing you read —
+Nine exercises, in order. Each one is a thing you *do*, not a thing you read -
 you break something, watch it fail, and put it back. That loop is what actually
 teaches a framework.
 
@@ -11,7 +11,7 @@ environment's Python:
 cd C:\Users\ismae\Documents\FoNix\backend
 ```
 
-Where you see `python`, use `..\backend_venv\Scripts\python.exe` — or activate
+Where you see `python`, use `..\backend_venv\Scripts\python.exe` - or activate
 the environment once per terminal and just type `python`:
 
 ```powershell
@@ -22,7 +22,7 @@ You'll know it worked when your prompt gains a `(backend_venv)` prefix.
 
 ---
 
-## Exercise 1 — Feel the N+1 problem
+## Exercise 1 - Feel the N+1 problem
 
 **Time: 5 minutes. This is the most important one.**
 
@@ -79,13 +79,13 @@ becomes 101 queries.
 Restore the two lines. Re-run. Back to passing.
 
 **What you learned:** `prefetch_related` collapses "one query per related row"
-into one extra query total. The test is a tripwire — if someone removes it in
+into one extra query total. The test is a tripwire - if someone removes it in
 six months, the suite tells them immediately instead of the site quietly getting
 slower.
 
 ---
 
-## Exercise 2 — See the actual SQL
+## Exercise 2 - See the actual SQL
 
 Same idea, but visually.
 
@@ -99,8 +99,8 @@ Same idea, but visually.
 3. You get DRF's browsable API page. On the right is the **django-debug-toolbar**
    panel. Click **SQL**.
 
-You'll see every query the request ran, how long each took, and — click
-"Toggle Stacktrace" — exactly which line of your code triggered it.
+You'll see every query the request ran, how long each took, and - click
+"Toggle Stacktrace" - exactly which line of your code triggered it.
 
 Now try the detail endpoint:
 
@@ -116,7 +116,7 @@ shows you.
 
 ---
 
-## Exercise 3 — Talk to your models directly
+## Exercise 3 - Talk to your models directly
 
 The Django shell is a Python REPL with your project loaded. It is the fastest
 way to understand the ORM.
@@ -141,7 +141,7 @@ ignis = CarModel.objects.get(slug="ignis")
 ignis.name
 ignis.base_price
 
-# The reverse relationship — every image pointing at this car
+# The reverse relationship - every image pointing at this car
 ignis.images.all()
 ignis.images.count()
 
@@ -160,7 +160,7 @@ print(CarModel.objects.filter(range_km__gte=600).query)
 from django.db.models import Avg, Max, Count
 CarModel.objects.aggregate(Avg("base_price"), Max("top_speed_kmh"))
 
-# Annotation — attach a computed column to each row
+# Annotation - attach a computed column to each row
 CarModel.objects.annotate(image_count=Count("images")).values("name", "image_count")
 ```
 
@@ -175,13 +175,13 @@ CarModel.objects.get(slug="does-not-exist")
 You get `CarModel.DoesNotExist`. That is why views use `get_object_or_404` or
 DRF's generic views instead of a bare `.get()`.
 
-**What you learned:** querysets are lazy — none of the filtering above touched
+**What you learned:** querysets are lazy - none of the filtering above touched
 the database until you printed the result. That laziness is what lets you chain
 `.filter().exclude().order_by()` and still issue one query.
 
 ---
 
-## Exercise 4 — Add a field (the full migration cycle)
+## Exercise 4 - Add a field (the full migration cycle)
 
 You're going to add a `body_style` field to cars.
 
@@ -218,7 +218,7 @@ Migrations for 'cars':
 ```
 
 **Open that file and read it.** It is plain Python describing the change. This
-is the file that gets committed to git — it is your schema's history.
+is the file that gets committed to git - it is your schema's history.
 
 ### Step 3: preview the SQL
 
@@ -241,7 +241,7 @@ python manage.py migrate
 python manage.py shell -c "from cars.models import CarModel; print(CarModel.objects.first().body_style)"
 ```
 
-Prints `coupe` — the default was applied to existing rows.
+Prints `coupe` - the default was applied to existing rows.
 
 ### Step 6: expose it in the API
 
@@ -260,11 +260,11 @@ remove the model field.
 
 **What you learned:** the cycle is always *change model → makemigrations →
 migrate*. Migrations are reversible and readable. And a field existing in the
-database does not make it visible in the API — the serializer decides that.
+database does not make it visible in the API - the serializer decides that.
 
 ---
 
-## Exercise 5 — Break a permission, watch the guard hold
+## Exercise 5 - Break a permission, watch the guard hold
 
 This is how you build confidence that security actually works.
 
@@ -288,7 +288,7 @@ return bool(user and user.is_authenticated and user.is_fonix_admin)
 to:
 
 ```python
-return bool(user and user.is_authenticated)   # oops — any logged-in user
+return bool(user and user.is_authenticated)   # oops - any logged-in user
 ```
 
 ### Step 3: run again
@@ -307,7 +307,7 @@ tests are what stop a one-word change from opening your catalog to the world.
 
 ---
 
-## Exercise 6 — Prove the price cannot be faked
+## Exercise 6 - Prove the price cannot be faked
 
 The most important security property in the whole project.
 
@@ -325,7 +325,7 @@ Invoke-RestMethod -Uri http://127.0.0.1:8000/api/orders/ -Method Post -Body $ord
 ```
 
 The response comes back with `total: 2400000.00`. Your `price_at_purchase` was
-**silently ignored** — the server read the real price from its own database.
+**silently ignored** - the server read the real price from its own database.
 
 Now find *why*: [backend/orders/serializers.py](backend/orders/serializers.py),
 `OrderItemWriteSerializer`. It has exactly two fields, `car` and `quantity`.
@@ -336,7 +336,7 @@ price" but "there is no way to send a price."
 
 ---
 
-## Exercise 7 — Add your own endpoint
+## Exercise 7 - Add your own endpoint
 
 Build `GET /api/cars/stats/` returning range-wide statistics.
 
@@ -360,7 +360,7 @@ from rest_framework.response import Response
         return Response(data)
 ```
 
-Visit `http://127.0.0.1:8000/api/cars/stats/`. That's it — the router found the
+Visit `http://127.0.0.1:8000/api/cars/stats/`. That's it - the router found the
 new action automatically, and `IsAdminOrReadOnly` already lets `GET` through.
 
 **Now write a test for it** in `cars/tests/test_api.py`:
@@ -378,10 +378,10 @@ the router derives the route name (`carmodel-stats`) automatically.
 
 ---
 
-## Exercise 8 — Move to PostgreSQL
+## Exercise 8 - Move to PostgreSQL
 
 SQLite is a single file and perfect for learning. PostgreSQL is what this
-project is actually designed for — and there are real behaviours SQLite does not
+project is actually designed for - and there are real behaviours SQLite does not
 enforce.
 
 ### Why bother
@@ -401,7 +401,7 @@ class of surprise.
 
 Download the Windows installer from
 <https://www.postgresql.org/download/windows/>. During setup you set a password
-for the `postgres` superuser — write it down.
+for the `postgres` superuser - write it down.
 
 ### Step 2: create the database
 
@@ -488,15 +488,15 @@ entire point of the split-settings pattern.
 
 ---
 
-## Exercise 9 — Read a request end to end
+## Exercise 9 - Read a request end to end
 
 No commands. Open five files in this order and trace one click:
 
-1. [frontend/src/pages/Store.jsx](frontend/src/pages/Store.jsx) — calls `fetchCars()`
-2. [frontend/src/api/endpoints.js](frontend/src/api/endpoints.js) — `api.get("/cars/")`
-3. [backend/config/urls.py](backend/config/urls.py) — matches `api/cars/`, delegates
-4. [backend/cars/urls.py](backend/cars/urls.py) — router maps it to the ViewSet
-5. [backend/cars/views.py](backend/cars/views.py) — permission, queryset, serializer
+1. [frontend/src/pages/Store.jsx](frontend/src/pages/Store.jsx) - calls `fetchCars()`
+2. [frontend/src/api/endpoints.js](frontend/src/api/endpoints.js) - `api.get("/cars/")`
+3. [backend/config/urls.py](backend/config/urls.py) - matches `api/cars/`, delegates
+4. [backend/cars/urls.py](backend/cars/urls.py) - router maps it to the ViewSet
+5. [backend/cars/views.py](backend/cars/views.py) - permission, queryset, serializer
 
 Then read [ARCHITECTURE.md](ARCHITECTURE.md), which narrates exactly that path
 with the reasoning at each step.
@@ -508,13 +508,13 @@ with the reasoning at each step.
 Things this project deliberately does not do, roughly in order of how much
 you'd learn:
 
-1. **Frontend tests** — Vitest + React Testing Library for `CartContext`.
-2. **`select_related` practice** — add a `Manufacturer` model with a FK from
+1. **Frontend tests** - Vitest + React Testing Library for `CartContext`.
+2. **`select_related` practice** - add a `Manufacturer` model with a FK from
    `CarModel`, then watch the store page N+1 and fix it.
-3. **Filtering** — `django-filter` for `?min_range=600&sort=price`.
-4. **Caching** — put Redis in front of the catalog endpoint.
-5. **Celery** — send the order confirmation email in a background worker.
-6. **Deployment** — `production.py` is already written; add Docker and a
+3. **Filtering** - `django-filter` for `?min_range=600&sort=price`.
+4. **Caching** - put Redis in front of the catalog endpoint.
+5. **Celery** - send the order confirmation email in a background worker.
+6. **Deployment** - `production.py` is already written; add Docker and a
    platform.
 
 Do them one at a time, and write the test first each time.

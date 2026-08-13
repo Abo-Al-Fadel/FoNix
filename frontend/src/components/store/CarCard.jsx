@@ -20,7 +20,7 @@ export default function CarCard({ car }) {
     */
     <Link
       to={`/store/${car.slug}`}
-      className="fx-sheen group relative flex w-full flex-col overflow-hidden rounded-3xl border border-hairline bg-graphite/70 transition-all duration-500 ease-fonix hover:-translate-y-1 hover:border-white/25 hover:shadow-[0_24px_60px_-24px_rgba(0,0,0,0.9)]"
+      className="fx-sheen group relative flex w-full flex-col overflow-hidden rounded-card border border-hairline bg-graphite/70 transition-all duration-500 ease-fonix hover:-translate-y-1 hover:border-white/25 hover:shadow-[0_24px_60px_-24px_rgba(0,0,0,0.9)]"
     >
       <div className="relative aspect-16/9 overflow-hidden bg-void">
         {/*

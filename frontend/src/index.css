@@ -3,18 +3,28 @@
 /* ---------------------------------------------------------------------------
    Fonts
 
-   Self-hosted through @fontsource rather than a <link> to Google's CDN. Two
+   Self-hosted through @fontsource rather than a link to Google's CDN. Two
    reasons that matter here: the font files ship with the bundle so there is no
    third-party round trip on first paint, and the browser has the file before
-   it paints text -- which is what prevents the flash of unstyled text that
-   would otherwise land right in the middle of the hero sequence.
+   it paints text, which is what prevents the flash of unstyled text that would
+   otherwise land right in the middle of the hero sequence.
 
-   Only the weights actually used are imported. Pulling in all nine weights of
-   Montserrat would add several hundred kilobytes for nothing.
+   Three faces, three jobs. Studying Kia and Lamborghini, the pattern on real
+   marque sites is a cohesive family used across several weights, plus one
+   loud display cut reserved for the badge moment. So:
+
+     Anton          the hero wordmark ONLY. One place, maximum impact.
+     Space Grotesk  every heading, eyebrow and stat. Geometric and slightly
+                    technical, it reads "engineered" where Montserrat read
+                    "generic corporate". Weights 500/600/700.
+     Inter          body copy, UI, buttons. The correct face for small text.
+
+   Only the weights actually used are imported; the rest would be dead weight.
 --------------------------------------------------------------------------- */
 @import "@fontsource/anton/400.css";
-@import "@fontsource/montserrat/600.css";
-@import "@fontsource/montserrat/700.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/600.css";
+@import "@fontsource/space-grotesk/700.css";
 @import "@fontsource/inter/400.css";
 @import "@fontsource/inter/500.css";
 @import "@fontsource/inter/600.css";
@@ -71,8 +81,23 @@
   --color-glass: rgba(255, 255, 255, 0.05);
 
   --font-display: "Anton", "Impact", sans-serif;
-  --font-heading: "Montserrat", "Segoe UI", sans-serif;
+  --font-heading: "Space Grotesk", "Segoe UI", sans-serif;
   --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+
+  /* Radius scale.
+
+     The reference marques use SHARP corners: Lamborghini's cards sit at 1-2px,
+     Kia's at 4px. Big rounded panels read as "app", small radii read as
+     "product". So the whole system was pulled in from the old 16-24px pills to
+     a restrained 2-6px, defined once here and referenced as rounded-card etc.
+
+     Buttons and the nav keep their pill shape deliberately: a fully-round CTA
+     is a common premium cue (Porsche, Polestar both use it), and it reads as
+     intentional against the sharp panels rather than inconsistent. */
+  --radius-panel: 2px; /* large surfaces: cards, spec panels, media frames */
+  --radius-card: 4px; /* the default box corner */
+  --radius-input: 4px; /* form controls */
+  --radius-chip: 6px; /* small pills that are not buttons */
 
   /* One shared easing curve. Reusing it everywhere is most of what makes
      unrelated animations feel like they belong to the same object. */

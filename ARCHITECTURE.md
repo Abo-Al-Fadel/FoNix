@@ -1,10 +1,10 @@
-# FoNix — how it all fits together
+# FoNix - how it all fits together
 
 A walkthrough written for someone learning Django properly. It follows a real
 request from the browser to the database and back, then covers the data model,
 security, and how the two codebases talk.
 
-Read it next to the code — every section names the file it is describing.
+Read it next to the code - every section names the file it is describing.
 
 ---
 
@@ -25,7 +25,7 @@ Read it next to the code — every section names the file it is describing.
                                      └────────────────────┘
 ```
 
-These are **two separate programs**. Django serves no HTML for the site — it
+These are **two separate programs**. Django serves no HTML for the site - it
 only answers `/api/...` with JSON (and `/admin/` with its own HTML). React
 renders everything the visitor sees.
 
@@ -39,7 +39,7 @@ click "Store", React swaps the page in the browser and Django is never told.
 
 Let's trace **loading the store page**.
 
-### Step 1 — React asks for data
+### Step 1 - React asks for data
 
 `src/pages/Store.jsx` renders and calls a hook:
 
@@ -49,10 +49,10 @@ const { data: cars, error, isLoading, retry } = useApiResource(fetcher);
 ```
 
 `useApiResource` (`src/hooks/useApiResource.js`) runs the fetcher in a
-`useEffect` and tracks three states — loading, error, data. Every page that
+`useEffect` and tracks three states - loading, error, data. Every page that
 loads data uses it, which is why they all behave the same.
 
-### Step 2 — the API client sends it
+### Step 2 - the API client sends it
 
 `fetchCars` lives in `src/api/endpoints.js`:
 
@@ -64,7 +64,7 @@ export async function fetchCars() {
 ```
 
 `api` is the configured axios instance from `src/api/client.js`. **Nothing in
-the app imports bare `axios`** — everything goes through this one instance, so
+the app imports bare `axios`** - everything goes through this one instance, so
 the interceptors below always apply.
 
 On the way out, a request interceptor attaches the JWT if one is stored:
@@ -76,18 +76,18 @@ config.headers.Authorization = `Bearer ${token}`;
 The catalog is public so this is not needed here, but it costs nothing and
 means every request is uniformly authenticated.
 
-### Step 3 — Django routes it
+### Step 3 - Django routes it
 
 The URL is `http://127.0.0.1:8000/api/cars/`. Django matches it in order:
 
-1. **`config/urls.py`** — the root URL map. It sees the path starts with
+1. **`config/urls.py`** - the root URL map. It sees the path starts with
    `api/cars/` and hands the *rest* of the path to another file:
 
    ```python
    path("api/cars/", include("cars.urls")),
    ```
 
-2. **`cars/urls.py`** — this app's own URL map. It does not list routes by
+2. **`cars/urls.py`** - this app's own URL map. It does not list routes by
    hand; a DRF router generates them from the ViewSet:
 
    ```python
@@ -99,7 +99,7 @@ The URL is `http://127.0.0.1:8000/api/cars/`. Django matches it in order:
    The router creates `/` → list/create and `/<slug>/` → retrieve/update/delete,
    and names them `carmodel-list` and `carmodel-detail`.
 
-> **The file you have open, `accounts/urls.py`, is the same pattern** — except
+> **The file you have open, `accounts/urls.py`, is the same pattern** - except
 > auth endpoints aren't a ViewSet (register, login and refresh are three
 > unrelated actions, not CRUD on one resource), so they're listed by hand:
 >
@@ -117,7 +117,7 @@ The URL is `http://127.0.0.1:8000/api/cars/`. Django matches it in order:
 > `reverse("accounts:login")` instead of hardcoding `"/api/auth/login/"`.
 > Change the path later and every test follows it automatically.
 
-### Step 4 — permissions run *before* anything else
+### Step 4 - permissions run *before* anything else
 
 `cars/views.py` declares:
 
@@ -134,7 +134,7 @@ declared on the view, not written as `if` statements inside it.* An `if` can be
 forgotten on the next endpoint you add; a permission class applies to every
 action on the ViewSet automatically.
 
-### Step 5 — the queryset
+### Step 5 - the queryset
 
 ```python
 def get_queryset(self):
@@ -145,19 +145,19 @@ def get_queryset(self):
 ```
 
 `CarModel.objects.all()` does **not** hit the database yet. Django querysets are
-lazy — SQL runs only when the results are actually iterated (during
+lazy - SQL runs only when the results are actually iterated (during
 serialization). That laziness is what lets you keep adding `.filter()`,
 `.prefetch_related()` etc. and still issue one query.
 
 `prefetch_related("images")` is the **N+1 fix**. Without it, serializing 20 cars
 that each show their gallery would run 1 query for the cars and then 1 more per
-car — 21 queries. `prefetch_related` fetches all the images in a single extra
+car - 21 queries. `prefetch_related` fetches all the images in a single extra
 `WHERE car_id IN (...)` query instead. Total: 2.
 
 The list endpoint doesn't prefetch because `CarListSerializer` doesn't include
-images — prefetching there would be a wasted query. Hence the `if`.
+images - prefetching there would be a wasted query. Hence the `if`.
 
-### Step 6 — the serializer
+### Step 6 - the serializer
 
 `cars/serializers.py` turns model instances into JSON-safe dicts.
 
@@ -177,10 +177,10 @@ def get_serializer_class(self):
     return CarDetailSerializer
 ```
 
-That is not duplication — it's the list endpoint refusing to send a 400-word
+That is not duplication - it's the list endpoint refusing to send a 400-word
 description for every card nobody is reading.
 
-### Step 7 — back to React
+### Step 7 - back to React
 
 DRF wraps the list in a pagination envelope:
 
@@ -239,7 +239,7 @@ car = models.ForeignKey(CarModel, related_name="images", on_delete=models.CASCAD
 
 …is what makes `car.images.all()` work.
 
-### `on_delete` — the most important decision in the schema
+### `on_delete` - the most important decision in the schema
 
 This answers: *"when the row I point at is deleted, what happens to me?"*
 
@@ -250,7 +250,7 @@ This answers: *"when the row I point at is deleted, what happens to me?"*
 | `OrderItem.order` | CASCADE | A line item has no meaning without its order. Delete the order, delete its lines. |
 | `CarImage.car` | CASCADE | A photo of a deleted car is an orphan row. |
 
-There is a test for every one of these in `orders/tests/test_models.py` — so if
+There is a test for every one of these in `orders/tests/test_models.py` - so if
 someone later "tidies up" a `PROTECT` into a `CASCADE`, the suite fails loudly.
 
 ### Migrations
@@ -262,7 +262,7 @@ python manage.py makemigrations   # look at my models, write a migration file
 python manage.py migrate          # apply pending migration files to the DB
 ```
 
-Migration files are **committed to git** — they are the history of your schema,
+Migration files are **committed to git** - they are the history of your schema,
 and every developer replays the same sequence to arrive at the same database.
 
 **The custom User model** (`accounts/models.py`) is the one thing that had to be
@@ -273,7 +273,7 @@ one file.
 
 ---
 
-## 4. Where the business logic lives — "fat models, thin views"
+## 4. Where the business logic lives - "fat models, thin views"
 
 The rule: **logic about data belongs on the model**, not in the view.
 
@@ -290,7 +290,7 @@ future invoice all read *the same number from the same code*. The moment that
 calculation is copy-pasted into a view, two of the three will eventually
 disagree.
 
-Compare the views — `orders/views.py` is about 20 lines of actual logic. It
+Compare the views - `orders/views.py` is about 20 lines of actual logic. It
 declares what serializer to use and who is allowed in; it computes nothing.
 
 ### The checkout, specifically
@@ -317,10 +317,10 @@ def create_from_cart(cls, *, user, cart_items):
 
 Two things to notice:
 
-1. **`@transaction.atomic`** — an order is meaningless without its lines. If
+1. **`@transaction.atomic`** - an order is meaningless without its lines. If
    the third `OrderItem` fails, the whole thing rolls back rather than leaving
    a £2m order with two of its three cars.
-2. **`price_at_purchase=item["car"].base_price`** — the price is read from the
+2. **`price_at_purchase=item["car"].base_price`** - the price is read from the
    *database record*, never from the request. This is the single most important
    line in the checkout.
 
@@ -339,7 +339,7 @@ each has a test proving it.
 A client could post `{"car": "ignis", "quantity": 1, "price_at_purchase": "1.00"}`.
 
 `OrderItemWriteSerializer` (`orders/serializers.py`) is a plain `Serializer` with
-only two fields — `car` and `quantity`. `price_at_purchase` is not a writable
+only two fields - `car` and `quantity`. `price_at_purchase` is not a writable
 field, so it is *structurally impossible* to supply. The server reads the price
 itself.
 
@@ -378,7 +378,7 @@ def get_queryset(self):
 ```
 
 Because the restriction is on the queryset, *every* action on the ViewSet
-inherits it — including any you add next month. A customer requesting another
+inherits it - including any you add next month. A customer requesting another
 person's order gets **404**, not 403, because a 403 would confirm that order
 exists.
 
@@ -387,8 +387,8 @@ exists.
 `IsAdminOrReadOnly` (`cars/permissions.py`). `GET`/`HEAD`/`OPTIONS` are open;
 everything else requires `user.is_fonix_admin`.
 
-Note that "what counts as an admin" is defined in exactly one place — the
-`is_fonix_admin` property on the User model — so changing the rule is a one-line
+Note that "what counts as an admin" is defined in exactly one place - the
+`is_fonix_admin` property on the User model - so changing the rule is a one-line
 edit rather than a search across the codebase.
 
 ### 6. Passwords
@@ -397,7 +397,7 @@ Never stored. `User.objects.create_user()` runs Django's PBKDF2 hasher. The
 column holds something like
 `pbkdf2_sha256$870000$xY3…$k9F…`. There is no way back to the original.
 
-This is also why the factories in the test suite call `create_user()` — using
+This is also why the factories in the test suite call `create_user()` - using
 `Model.objects.create()` would write the raw string and every login test would
 fail against perfectly correct code.
 
@@ -409,7 +409,7 @@ fail against perfectly correct code.
 SECRET_KEY = env("SECRET_KEY")
 ```
 
-If it is missing the project refuses to start. That is deliberate — far better
+If it is missing the project refuses to start. That is deliberate - far better
 than silently running on a default key identical on every checkout.
 
 `backend/.env` holds your real key and is **gitignored**. `backend/.env.example`
@@ -419,13 +419,13 @@ is committed and holds only instructions.
 
 `DEBUG = False` in `base.py`. Only `local.py` sets it to `True`. With `DEBUG=True`
 an unhandled exception renders a full traceback *including settings values* to
-whoever triggered it — which is why it must never be on in production.
+whoever triggered it - which is why it must never be on in production.
 
 ### 9. CORS
 
 Because the SPA is on a different origin (`:5173`) from the API (`:8000`), the
 browser blocks requests unless the server opts in. `local.py` names the exact
-origins — never `CORS_ALLOW_ALL_ORIGINS = True`, even in development, because
+origins - never `CORS_ALLOW_ALL_ORIGINS = True`, even in development, because
 that is a habit you carry into production.
 
 ### 10. Rate limiting
@@ -441,18 +441,18 @@ IP (`contact/views.py`). Without it, a script can fill your database in seconds.
 
 Two React Contexts wrap the whole app in `src/main.jsx`:
 
-- **`AuthContext`** — who is logged in. On first mount it tries
+- **`AuthContext`** - who is logged in. On first mount it tries
   `GET /api/auth/me/` using whatever token is in `localStorage`. If the access
   token has expired, the axios interceptor silently refreshes and retries, so a
   returning visitor stays logged in without noticing.
-- **`CartContext`** — a `useReducer` holding cart lines, mirrored to
+- **`CartContext`** - a `useReducer` holding cart lines, mirrored to
   `localStorage` on every change. **There is no `Cart` table.** The cart lives
   entirely in the browser until checkout posts the whole thing in one request.
 
 `CartProvider` sits *inside* `AuthProvider` because clearing the cart after
 checkout needs to know who is logged in, while auth never needs the cart.
 
-### Token refresh — a subtle bug worth understanding
+### Token refresh - a subtle bug worth understanding
 
 `src/api/client.js` holds the in-flight refresh in a shared promise:
 
@@ -462,7 +462,7 @@ refreshPromise = refreshPromise ?? refreshAccessToken();
 
 Without this, a page firing four requests with an expired token starts four
 refreshes. Since Django has `ROTATE_REFRESH_TOKENS` on, the first refresh
-invalidates the token the other three are using — and the user gets logged out
+invalidates the token the other three are using - and the user gets logged out
 at random. Sharing one promise means the first 401 refreshes and the rest wait.
 
 ### Route protection
@@ -470,7 +470,7 @@ at random. Sharing one promise means the first 401 refreshes and the rest wait.
 `RequireAuth` (`src/components/routing/RequireAuth.jsx`) redirects logged-out
 visitors away from `/account` and `/checkout`. To be clear about what this is:
 it controls **navigation, not access**. It stops someone landing on a page that
-would only show them errors. Deleting it would leak nothing — the API is scoped
+would only show them errors. Deleting it would leak nothing - the API is scoped
 regardless.
 
 Note the `isRestoring` guard. While the session is still being restored from
@@ -483,7 +483,7 @@ would bounce a valid session to the login page on every hard refresh.
 
 Two ways, and you should try both.
 
-**Automated** — the tests assert exact query counts:
+**Automated** - the tests assert exact query counts:
 
 ```python
 with self.assertNumQueries(2):
@@ -495,7 +495,7 @@ Break it deliberately: delete `.prefetch_related("images")` from
 `test_the_gallery_is_prefetched_rather_than_queried_per_image` fail. Put it
 back. That is the fastest way to *feel* what N+1 means.
 
-**Visual** — django-debug-toolbar. With the dev server running, open:
+**Visual** - django-debug-toolbar. With the dev server running, open:
 
 ```
 http://127.0.0.1:8000/api/cars/?format=api

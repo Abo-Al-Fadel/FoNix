@@ -6,7 +6,7 @@ import Reveal, { RevealGroup, RevealItem } from "../components/ui/Reveal.jsx";
 const DISCIPLINES = [
   {
     title: "Structures",
-    body: "Every FoNix uses a bonded carbon monocoque with the battery as a stressed member. The pack is not a box bolted underneath — it is part of what makes the car stiff.",
+    body: "Every FoNix uses a bonded carbon monocoque with the battery as a stressed member. The pack is not a box bolted underneath, and it is part of what makes the car stiff.",
   },
   {
     title: "Thermal",
@@ -35,13 +35,13 @@ export default function About() {
       <PageHeader
         eyebrow="The marque"
         title="Named for the thing that comes back."
-        lede="FoNix builds six electric cars in a converted aircraft hangar outside Bristol. The name is a deliberate misspelling — the phoenix, but engineered."
+        lede="FoNix builds six electric cars in a converted aircraft hangar outside Bristol. The name is a deliberate misspelling: the phoenix, but engineered."
       />
 
       <div className="fx-container">
         {/* --- Facts strip --- */}
         <Reveal>
-          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-hairline bg-hairline md:grid-cols-4">
+          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-card border border-hairline bg-hairline md:grid-cols-4">
             {FACTS.map((fact) => (
               <div key={fact.label} className="bg-void px-5 py-6">
                 <dt className="font-body text-[10px] uppercase tracking-[0.18em] text-faint">
@@ -60,7 +60,7 @@ export default function About() {
           <div className="grid items-center gap-12 md:grid-cols-[auto_1fr] md:gap-16">
             <Reveal direction="right">
               {/* The one place outside the hero where the mark appears at scale.
-                  Decorative — the heading beside it carries the meaning. */}
+                  Decorative, so the heading beside it carries the meaning. */}
               <FoNixMark className="h-24 w-auto text-white/10 md:h-44" />
             </Reveal>
             <Reveal delay={0.1}>
@@ -75,7 +75,7 @@ export default function About() {
               </p>
               <p className="mt-4 max-w-2xl font-body text-sm leading-relaxed text-muted md:text-base">
                 Inventing a marque meant the identity, the copy, the palette and
-                the logo could all be built from nothing — which is the part
+                the logo could all be built from nothing, which is the part
                 actually worth showing.
               </p>
             </Reveal>
@@ -91,7 +91,7 @@ export default function About() {
             </h2>
           </Reveal>
 
-          <RevealGroup className="mt-12 grid gap-px overflow-hidden rounded-3xl border border-hairline bg-hairline md:grid-cols-2">
+          <RevealGroup className="mt-12 grid gap-px overflow-hidden rounded-card border border-hairline bg-hairline md:grid-cols-2">
             {DISCIPLINES.map((discipline) => (
               <RevealItem
                 key={discipline.title}
@@ -114,7 +114,7 @@ export default function About() {
 
         {/* --- About this build --- */}
         <Reveal>
-          <section className="rounded-3xl border border-hairline bg-graphite/40 p-8 md:p-12">
+          <section className="rounded-card border border-hairline bg-graphite/40 p-8 md:p-12">
             <p className="fx-eyebrow">About this build</p>
             <h2 className="mt-4 font-heading text-2xl font-bold text-white md:text-3xl">
               What is actually running here
@@ -134,7 +134,7 @@ export default function About() {
                 <p className="mt-4">
                   The cart lives in the browser until checkout, at which point
                   the whole thing is posted in one request and becomes an order
-                  with its line items — with prices read from the database, never
+                  with its line items, with prices read from the database, never
                   from the request.
                 </p>
               </div>

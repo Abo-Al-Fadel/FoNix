@@ -6,9 +6,8 @@ Run once after migrating:
     python manage.py seed_catalog
 
 A management command rather than a data migration or a fixture JSON, because it
-copies real image files out of the asset package and into MEDIA_ROOT. Migrations
-should not depend on files that live outside the repo, and a fixture cannot
-attach an image at all.
+copies real image files into MEDIA_ROOT. Migrations should not depend on image
+files, and a fixture cannot attach one at all.
 """
 
 from __future__ import annotations
@@ -25,9 +24,11 @@ from cars.models import CarImage, CarModel
 
 from ._placeholder_art import render_placeholder
 
-# The asset package sits alongside the backend and frontend directories, and is
-# not part of either codebase -- it is source material.
-DEFAULT_ASSET_DIR = Path(settings.BASE_DIR).parent / "fonix_assest"
+# The flagship's stills are pulled from the very same 215-frame sequence the
+# homepage hero scrubs through, which lives (committed) in the frontend's public
+# folder. Reading from there rather than a separate source copy means there is
+# ONE canonical set of frames in the repo, not two that can drift apart.
+DEFAULT_ASSET_DIR = Path(settings.BASE_DIR).parent / "frontend" / "public" / "frames"
 
 # Which frames of the 215-frame orbit sequence become the flagship's product
 # stills. They are all genuinely different views of the same car, which is
@@ -59,7 +60,7 @@ CATALOG = [
             "There is no engine note to fake and no gearbox to wait for. Press "
             "the pedal and the horizon simply arrives. The dihedral doors, the "
             "single unbroken light blade along the flank, the cabin machined "
-            "from one billet of aluminium — none of it is decoration. Each "
+            "from one billet of aluminium - none of it is decoration. Each "
             "of them started as an aerodynamic or structural argument that the "
             "design team won."
         ),
@@ -157,7 +158,7 @@ CATALOG = [
         "tagline": "For the roads that stopped being roads.",
         "description": (
             "A raised, long-travel FoNix with 280mm of ground clearance and a "
-            "motor at each corner. Not a soft-roader with a body kit — the "
+            "motor at each corner. Not a soft-roader with a body kit - the "
             "battery floor is a structural skid plate, and the suspension was "
             "signed off in Iceland rather than on a ring road.\n\n"
             "It carries five people and their luggage 700 kilometres, then "
@@ -199,7 +200,8 @@ class Command(BaseCommand):
         if not frames.is_dir():
             raise CommandError(
                 f"Could not find the frame sequence at {frames}. "
-                "Pass --assets /path/to/fonix_assest."
+                "Pass --assets /path/to/frames-parent (the folder containing a "
+                "'scroll' directory of frame_*.webp)."
             )
 
         if options["reset"]:

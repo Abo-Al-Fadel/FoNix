@@ -50,7 +50,7 @@ export default function Contact() {
       <PageHeader
         eyebrow="Contact"
         title="Talk to us."
-        lede="Questions about the range, a request to visit the hangar, or anything else. Messages are stored for a human to read — no automated reply is sent."
+        lede="Questions about the range, a request to visit the hangar, or anything else. Messages are stored for a human to read - no automated reply is sent."
       />
 
       <div className="fx-container">
@@ -64,7 +64,7 @@ export default function Contact() {
               */
               <div
                 role="status"
-                className="rounded-3xl border border-ember/40 bg-ember/10 p-8"
+                className="rounded-card border border-ember/40 bg-ember/10 p-8"
               >
                 <p className="fx-eyebrow">Message received</p>
                 <h2 className="mt-4 font-heading text-2xl font-bold text-white">
@@ -140,7 +140,7 @@ export default function Contact() {
                     rows={6}
                     required
                     minLength={10}
-                    className="mt-2.5 w-full resize-y rounded-xl border border-hairline bg-graphite/60 px-4 py-3 font-body text-sm leading-relaxed text-white transition-colors placeholder:text-faint focus:border-white/30 focus:outline-none"
+                    className="mt-2.5 w-full resize-y rounded-input border border-hairline bg-graphite/60 px-4 py-3 font-body text-sm leading-relaxed text-white transition-colors placeholder:text-faint focus:border-white/30 focus:outline-none"
                   />
                   <p className="mt-2 font-body text-xs text-faint">
                     At least a sentence, please.
@@ -160,7 +160,7 @@ export default function Contact() {
           </div>
 
           <aside className="space-y-8">
-            <div className="rounded-3xl border border-hairline bg-graphite/50 p-6">
+            <div className="rounded-card border border-hairline bg-graphite/50 p-6">
               <h2 className="font-body text-xs uppercase tracking-[0.16em] text-faint">
                 The hangar
               </h2>
@@ -173,7 +173,7 @@ export default function Contact() {
               </p>
             </div>
 
-            <div className="rounded-3xl border border-hairline bg-graphite/50 p-6">
+            <div className="rounded-card border border-hairline bg-graphite/50 p-6">
               <h2 className="font-body text-xs uppercase tracking-[0.16em] text-faint">
                 A note on this form
               </h2>

@@ -8,6 +8,17 @@ export default defineConfig({
   // src/index.css under @theme, which keeps the whole design system in one
   // readable CSS file instead of split across a JS config and a stylesheet.
   plugins: [react(), tailwindcss()],
+
+  // Vitest configuration. jsdom gives the tests a fake DOM so React components
+  // and browser APIs (localStorage, matchMedia) work without a real browser.
+  // setupFiles runs once before the suite to register jest-dom matchers and
+  // stub the APIs jsdom does not implement.
+  test: {
+    environment: "jsdom",
+    globals: true,
+    setupFiles: "./src/test/setup.js",
+    css: false,
+  },
   build: {
     rollupOptions: {
       output: {

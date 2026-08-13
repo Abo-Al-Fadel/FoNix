@@ -89,7 +89,7 @@ export default function Store() {
         {/* --- Range summary strip --- */}
         {cars?.length ? (
           <Reveal>
-            <dl className="mb-12 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-hairline bg-hairline md:grid-cols-4">
+            <dl className="mb-12 grid grid-cols-2 gap-px overflow-hidden rounded-card border border-hairline bg-hairline md:grid-cols-4">
               {[
                 { label: "Models", value: cars.length },
                 { label: "From", value: formatPrice(priceFloor) },

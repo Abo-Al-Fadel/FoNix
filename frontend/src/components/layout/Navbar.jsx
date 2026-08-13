@@ -5,6 +5,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import FoNixMark from "../brand/FoNixMark.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useCart } from "../../context/CartContext.jsx";
+import usePrefersReducedMotion from "../../hooks/usePrefersReducedMotion.js";
 
 const LINKS = [
   { to: "/store", label: "Store" },
@@ -19,6 +20,7 @@ export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
   const { itemCount } = useCart();
   const drawerToggleRef = useRef(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   // Close the drawer on navigation, so tapping a link does not leave the menu
   // covering the page you just opened.
@@ -51,8 +53,26 @@ export default function Navbar() {
 
   return (
     <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-4 md:pt-6">
-      <nav
+      {/*
+        OPENING ANIMATION.
+
+        On load the bar unfurls: it starts clipped to a small pill on the left
+        (just the mark showing, like a closed capsule) and the clip opens
+        rightward to the full width, while the links fade in a beat behind it.
+        clipPath is animated rather than width because clipping leaves the
+        internal flex layout untouched, so nothing reflows or jumps as it opens.
+
+        Reduced motion skips straight to the open state.
+      */}
+      <motion.nav
         aria-label="Primary"
+        initial={
+          prefersReducedMotion
+            ? false
+            : { clipPath: "inset(0% 87% 0% 0% round 999px)" }
+        }
+        animate={{ clipPath: "inset(0% 0% 0% 0% round 999px)" }}
+        transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
         className={`pointer-events-auto flex w-full max-w-5xl items-center rounded-full border transition-colors duration-500 ${
           isScrolled
             ? "border-white/15 bg-white/[0.07] backdrop-blur-xl"
@@ -62,7 +82,7 @@ export default function Navbar() {
         <Link
           to="/"
           className="group flex shrink-0 items-center gap-2.5 text-white transition-colors hover:text-ember"
-          aria-label="FoNix — home"
+          aria-label="FoNix home"
         >
           <FoNixMark className="h-4 w-auto transition-transform duration-500 ease-fonix group-hover:scale-110 md:h-5" />
           <span className="font-heading text-sm font-bold tracking-[0.2em] md:text-base">
@@ -155,7 +175,7 @@ export default function Navbar() {
             <HamburgerIcon isOpen={isDrawerOpen} />
           </button>
         </div>
-      </nav>
+      </motion.nav>
 
       <AnimatePresence>
         {isDrawerOpen ? (
@@ -165,7 +185,7 @@ export default function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="fx-glass pointer-events-auto absolute inset-x-4 top-20 rounded-3xl p-3 md:hidden"
+            className="fx-glass pointer-events-auto absolute inset-x-4 top-20 rounded-card p-3 md:hidden"
           >
             <ul className="flex flex-col">
               {LINKS.map((link) => (
@@ -187,7 +207,7 @@ export default function Navbar() {
                     <button
                       type="button"
                       onClick={logout}
-                      className="flex min-h-12 w-full items-center rounded-2xl px-4 font-body text-sm text-faint transition-colors hover:bg-white/5 hover:text-white"
+                      className="flex min-h-12 w-full items-center rounded-card px-4 font-body text-sm text-faint transition-colors hover:bg-white/5 hover:text-white"
                     >
                       Log out
                     </button>
@@ -233,7 +253,7 @@ function navLinkClasses({ isActive }) {
 
 function drawerLinkClasses({ isActive }) {
   return [
-    "flex min-h-12 items-center rounded-2xl px-4 font-body text-sm transition-colors",
+    "flex min-h-12 items-center rounded-card px-4 font-body text-sm transition-colors",
     isActive ? "bg-ember/15 text-ember" : "text-white hover:bg-white/5",
   ].join(" ");
 }

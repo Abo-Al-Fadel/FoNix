@@ -17,7 +17,7 @@ const gbp = new Intl.NumberFormat("en-GB", {
 /** @param {string|number} value - DRF sends decimals as strings. */
 export function formatPrice(value) {
   const number = Number(value);
-  return Number.isFinite(number) ? gbp.format(number) : "—";
+  return Number.isFinite(number) ? gbp.format(number) : "-";
 }
 
 const dateFormatter = new Intl.DateTimeFormat("en-GB", {
@@ -28,7 +28,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
 
 export function formatDate(isoString) {
   const date = new Date(isoString);
-  return Number.isNaN(date.getTime()) ? "—" : dateFormatter.format(date);
+  return Number.isNaN(date.getTime()) ? "-" : dateFormatter.format(date);
 }
 
 /**

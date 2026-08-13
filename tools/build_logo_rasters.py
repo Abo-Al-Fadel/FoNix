@@ -71,13 +71,16 @@ def main() -> None:
 
     targets = [
         # (filename, size, fill, background)
-        ("favicon-32.png", 32, FX_EMBER, FX_BLACK),
-        ("favicon-192.png", 192, FX_EMBER, FX_BLACK),
-        # Apple ignores transparency and composites onto white, so the dark
-        # plate has to be baked in rather than left to the OS.
-        ("apple-touch-icon.png", 180, FX_EMBER, FX_BLACK),
-        # Flat reverse mark with no plate, for anywhere the brand needs the
-        # bare logo on its own dark surface.
+        # The bare white mark on transparent, no plate: the favicon should read
+        # as just the logo on a browser tab of any colour.
+        ("favicon-32.png", 32, FX_WHITE, None),
+        ("favicon-192.png", 192, FX_WHITE, None),
+        # Apple ignores transparency and composites the icon onto a WHITE
+        # background, so a white-on-transparent mark would vanish. The home-screen
+        # icon is the one place the dark plate has to stay baked in, or the logo
+        # disappears entirely on iOS.
+        ("apple-touch-icon.png", 180, FX_WHITE, FX_BLACK),
+        # Flat reverse mark, for anywhere the brand needs the bare logo.
         ("logo/fonix-mark-reverse.png", 512, FX_WHITE, None),
     ]
 
@@ -87,9 +90,10 @@ def main() -> None:
         render_mark(size, fill=fill, background=background).save(path)
         print(f"wrote {path.relative_to(OUTPUT_DIR.parent.parent)} ({size}px)")
 
-    # A multi-resolution .ico for the handful of contexts that still demand one.
+    # A multi-resolution .ico for the handful of contexts (some Windows surfaces)
+    # that still demand one. White mark, transparent ground.
     ico_path = OUTPUT_DIR / "favicon.ico"
-    render_mark(256, fill=FX_EMBER, background=FX_BLACK).save(
+    render_mark(256, fill=FX_WHITE, background=None).save(
         ico_path, sizes=[(16, 16), (32, 32), (48, 48), (64, 64)]
     )
     print(f"wrote {ico_path.relative_to(OUTPUT_DIR.parent.parent)} (multi-size)")

@@ -64,6 +64,8 @@ def main() -> None:
     print("Brand:")
     save_webp(SRC / "brand" / "hangar.png", BRAND_OUT / "hangar.webp", 1600)
     save_webp(SRC / "brand" / "light-blade.png", BRAND_OUT / "light-blade.webp", 1600)
+    # The lit night facade of the FoNix showroom -- used as the About page hero.
+    save_webp(SRC / "brand" / "Company.png", BRAND_OUT / "showroom.webp", 1600)
 
     # The social banner: wider format, a touch higher quality since it is a
     # first impression when the link is shared.

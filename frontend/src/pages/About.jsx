@@ -39,6 +39,23 @@ export default function About() {
       />
 
       <div className="fx-container">
+        {/* --- Showroom facade: the marque's public face, at night --- */}
+        <Reveal className="mb-12">
+          <figure className="fx-sheen overflow-hidden rounded-card border border-hairline">
+            <img
+              src="/brand/showroom.webp"
+              alt="The FoNix showroom at night: a glass-fronted building with the lit FoNix wordmark above the entrance, cars visible on display across two floors behind the glass, reflected in the wet forecourt."
+              width={1600}
+              height={900}
+              loading="lazy"
+              className="aspect-video w-full object-cover"
+            />
+            <figcaption className="border-t border-hairline bg-void px-5 py-3 font-body text-[11px] uppercase tracking-[0.16em] text-faint">
+              The FoNix showroom, Bristol
+            </figcaption>
+          </figure>
+        </Reveal>
+
         {/* --- Facts strip --- */}
         <Reveal>
           <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-card border border-hairline bg-hairline md:grid-cols-4">

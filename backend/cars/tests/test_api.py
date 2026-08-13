@@ -7,7 +7,11 @@ from PIL import Image
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from accounts.tests.factories import AdminUserFactory, UserFactory
+from accounts.tests.factories import (
+    AdminUserFactory,
+    StaffUserFactory,
+    UserFactory,
+)
 from cars.models import CarModel
 
 from .factories import CarImageFactory, CarModelFactory
@@ -233,3 +237,65 @@ class CarWritePermissionTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(CarModel.objects.count(), 0)
+
+    # -- staff tier --------------------------------------------------------- #
+
+    def test_a_staff_member_can_create_a_car(self):
+        """Managing the catalogue is the Staff role's whole purpose."""
+        self.client.force_authenticate(user=StaffUserFactory())
+
+        response = self.client.post(
+            self.list_url, self.create_payload(), format="multipart"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(CarModel.objects.filter(slug="aurea").exists())
+
+    def test_a_staff_member_can_hide_a_car(self):
+        self.client.force_authenticate(user=StaffUserFactory())
+
+        response = self.client.patch(self.detail_url, {"is_published": False})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.car.refresh_from_db()
+        self.assertFalse(self.car.is_published)
+
+
+class CarVisibilityTests(APITestCase):
+    """Hidden cars are invisible to the public but manageable by staff."""
+
+    def setUp(self):
+        self.list_url = reverse("cars:carmodel-list")
+        self.hidden = CarModelFactory(name="Retired One", is_published=False)
+        self.visible = CarModelFactory(name="On Sale", is_published=True)
+        self.hidden_detail = reverse(
+            "cars:carmodel-detail", kwargs={"slug": self.hidden.slug}
+        )
+
+    def test_the_public_list_omits_hidden_cars(self):
+        slugs = [c["slug"] for c in self.client.get(self.list_url).data["results"]]
+        self.assertIn(self.visible.slug, slugs)
+        self.assertNotIn(self.hidden.slug, slugs)
+
+    def test_a_hidden_car_is_a_404_to_the_public(self):
+        # A 404, not a 403: a shopper guessing a retired car's slug should not
+        # even learn that it exists.
+        self.assertEqual(
+            self.client.get(self.hidden_detail).status_code, status.HTTP_404_NOT_FOUND
+        )
+
+    def test_staff_see_hidden_cars_in_the_list(self):
+        self.client.force_authenticate(user=StaffUserFactory())
+        slugs = [c["slug"] for c in self.client.get(self.list_url).data["results"]]
+        self.assertIn(self.hidden.slug, slugs)
+
+    def test_cost_is_never_exposed_to_the_public(self):
+        CarModelFactory(name="Priced", cost=Decimal("100000.00"))
+        row = self.client.get(self.list_url).data["results"][0]
+        self.assertNotIn("cost", row)
+
+    def test_staff_see_cost_and_publication_state(self):
+        self.client.force_authenticate(user=StaffUserFactory())
+        row = self.client.get(self.list_url).data["results"][0]
+        self.assertIn("cost", row)
+        self.assertIn("is_published", row)

@@ -30,8 +30,9 @@ class CarModelAdmin(admin.ModelAdmin):
         "top_speed_kmh",
         "is_hero",
         "has_real_imagery",
+        "is_published",
     )
-    list_filter = ("is_hero", "has_real_imagery")
+    list_filter = ("is_hero", "has_real_imagery", "is_published")
     search_fields = ("name", "tagline", "description")
 
     # Live-fills the slug from the name as you type, so the admin behaves the
@@ -41,13 +42,13 @@ class CarModelAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (None, {"fields": ("name", "slug", "tagline", "description")}),
-        ("Pricing", {"fields": ("base_price",)}),
+        ("Pricing", {"fields": ("base_price", "cost")}),
         (
             "Performance",
             {"fields": ("range_km", "top_speed_kmh", "acceleration_0_100")},
         ),
         ("Imagery", {"fields": ("thumbnail", "thumbnail_alt", "has_real_imagery")}),
-        ("Homepage", {"fields": ("is_hero",)}),
+        ("Visibility", {"fields": ("is_hero", "is_published")}),
     )
 
 

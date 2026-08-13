@@ -1,9 +1,24 @@
+from decimal import Decimal
+
 from django.contrib.auth import get_user_model
-from rest_framework import generics, permissions
+from django.db.models import (
+    Count,
+    DecimalField,
+    F,
+    OuterRef,
+    Subquery,
+    Sum,
+    Value,
+)
+from django.db.models.functions import Coalesce
+from rest_framework import generics, mixins, permissions, viewsets
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .serializers import RegisterSerializer, UserSerializer
+from orders.models import OrderItem
+
+from .permissions import CanManageUser, IsAdmin
+from .serializers import RegisterSerializer, UserAdminSerializer, UserSerializer
 
 User = get_user_model()
 
@@ -72,3 +87,59 @@ class MeView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class UserAdminViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    /api/admin/users/ -- the control panel's user management.
+
+    List and read every account; change a user's role or active state. No
+    create (accounts are made by registering) and no destroy (Order.user is
+    PROTECT, so a customer with orders cannot be deleted anyway -- the panel
+    deactivates instead, which is what real shops do). Update is PATCH-only in
+    practice; the serializer makes everything but role/is_active read-only.
+
+    Two permission layers stack here:
+      - IsAdmin gates the endpoint to admins and owners.
+      - CanManageUser adds the object-level who-may-touch-whom rules (no acting
+        on yourself; only an owner may act on another owner).
+    The what-may-this-change-to rules (role ceiling, last-owner protection) live
+    in UserAdminSerializer.
+    """
+
+    serializer_class = UserAdminSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdmin, CanManageUser]
+
+    def get_queryset(self):
+        # total_spent as a correlated subquery, not a join-and-Sum: summing over
+        # orders__items in the same annotate as Count("orders") would fan the
+        # rows out and multiply both figures. The subquery aggregates each user's
+        # line items independently, so the two annotations stay correct.
+        spent_per_user = (
+            OrderItem.objects.filter(order__user=OuterRef("pk"))
+            .values("order__user")
+            .annotate(
+                total=Sum(
+                    F("price_at_purchase") * F("quantity"),
+                    output_field=DecimalField(max_digits=14, decimal_places=2),
+                )
+            )
+            .values("total")
+        )
+        return User.objects.annotate(
+            order_count=Count("orders", distinct=True),
+            total_spent=Coalesce(
+                Subquery(
+                    spent_per_user,
+                    output_field=DecimalField(max_digits=14, decimal_places=2),
+                ),
+                Value(Decimal("0.00"), output_field=DecimalField(
+                    max_digits=14, decimal_places=2
+                )),
+            ),
+        ).order_by("-date_joined")

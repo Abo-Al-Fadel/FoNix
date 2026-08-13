@@ -503,18 +503,53 @@ with the reasoning at each step.
 
 ---
 
+## Exercise 10 - Follow a permission guardrail
+
+The control panel adds a four-tier role hierarchy. The interesting code is not
+the happy path but the guardrails — the rules that stop an admin doing something
+only an owner should. Prove one holds:
+
+```bash
+cd backend
+../backend_venv/Scripts/python manage.py seed_team   # owner/admin/staff demos
+../backend_venv/Scripts/python manage.py shell
+```
+
+```python
+from rest_framework.test import APIClient
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
+admin = User.objects.get(username="admin")
+owner = User.objects.get(username="owner")
+
+c = APIClient()
+c.force_authenticate(admin)
+
+# An admin trying to touch an owner's account: expect 403.
+r = c.patch(f"/api/admin/users/{owner.pk}/", {"role": "admin"}, format="json")
+print(r.status_code, r.data)
+```
+
+Now read why: [`CanManageUser`](backend/accounts/permissions.py) (who may act on
+whom) and [`UserAdminSerializer.validate`](backend/accounts/serializers.py) (what
+a change may set). The whole matrix is in [ROLES.md](ROLES.md), and every rule
+here has a test in `backend/accounts/tests/test_admin_api.py` — run just those
+with `python manage.py test accounts.tests.test_admin_api`.
+
+---
+
 ## Where to go after this
 
 Things this project deliberately does not do, roughly in order of how much
 you'd learn:
 
-1. **Frontend tests** - Vitest + React Testing Library for `CartContext`.
-2. **`select_related` practice** - add a `Manufacturer` model with a FK from
+1. **`select_related` practice** - add a `Manufacturer` model with a FK from
    `CarModel`, then watch the store page N+1 and fix it.
-3. **Filtering** - `django-filter` for `?min_range=600&sort=price`.
-4. **Caching** - put Redis in front of the catalog endpoint.
-5. **Celery** - send the order confirmation email in a background worker.
-6. **Deployment** - `production.py` is already written; add Docker and a
+2. **Filtering** - `django-filter` for `?min_range=600&sort=price`.
+3. **Caching** - put Redis in front of the catalog endpoint.
+4. **Celery** - send the order confirmation email in a background worker.
+5. **Deployment** - `production.py` is already written; add Docker and a
    platform.
 
 Do them one at a time, and write the test first each time.

@@ -50,9 +50,28 @@ class Order(models.Model):
     """A placed order. No payment is taken -- v1 stops at recording intent."""
 
     class Status(models.TextChoices):
+        # The fulfilment lifecycle of a built-to-order hypercar. Ordered as the
+        # journey runs; ALLOWED_TRANSITIONS below encodes which hops are legal.
         PENDING = "pending", "Pending"
         CONFIRMED = "confirmed", "Confirmed"
+        IN_PRODUCTION = "in_production", "In production"
+        IN_TRANSIT = "in_transit", "In transit"
+        DELIVERED = "delivered", "Delivered"
         CANCELLED = "cancelled", "Cancelled"
+
+    # Which status a given status may move to. The happy path steps forward one
+    # stage at a time; an order may be cancelled from any stage that has not yet
+    # been delivered; delivered and cancelled are terminal (empty lists). Keeping
+    # this as data -- rather than a tangle of ifs in the view -- means the rule is
+    # inspectable in one place and easy to test exhaustively.
+    ALLOWED_TRANSITIONS = {
+        Status.PENDING: [Status.CONFIRMED, Status.CANCELLED],
+        Status.CONFIRMED: [Status.IN_PRODUCTION, Status.CANCELLED],
+        Status.IN_PRODUCTION: [Status.IN_TRANSIT, Status.CANCELLED],
+        Status.IN_TRANSIT: [Status.DELIVERED, Status.CANCELLED],
+        Status.DELIVERED: [],
+        Status.CANCELLED: [],
+    }
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -65,7 +84,12 @@ class Order(models.Model):
         related_name="orders",
     )
     status = models.CharField(
-        max_length=10, choices=Status.choices, default=Status.PENDING
+        # 20, not 10: "in_production" is 13 characters. A too-narrow status
+        # column is the kind of bug that only shows up the first time someone
+        # advances an order to that exact stage.
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -99,6 +123,14 @@ class Order(models.Model):
     @property
     def item_count(self) -> int:
         return sum(item.quantity for item in self.items.all())
+
+    def can_transition_to(self, new_status: str) -> bool:
+        """Whether this order may legally move to `new_status` from where it is.
+
+        The rule lives here, on the model, so the API action, the Django admin
+        and any future automation all judge a transition the same way.
+        """
+        return new_status in self.ALLOWED_TRANSITIONS.get(self.status, [])
 
     @classmethod
     @transaction.atomic

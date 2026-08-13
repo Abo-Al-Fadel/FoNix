@@ -83,6 +83,36 @@ class OrderReadSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class OrderAdminSerializer(OrderReadSerializer):
+    """
+    The orders-tracking representation, used only for admins and owners.
+
+    Everything the customer's own read serializer shows, plus who placed the
+    order -- the one thing a fulfilment view needs that a customer looking at
+    their own orders does not. The customer fields are read-only; status changes
+    go through the dedicated `status` action, not a writable field here.
+    """
+
+    customer = serializers.CharField(source="user.username", read_only=True)
+    customer_email = serializers.EmailField(source="user.email", read_only=True)
+
+    class Meta(OrderReadSerializer.Meta):
+        fields = OrderReadSerializer.Meta.fields + ("customer", "customer_email")
+        read_only_fields = fields
+
+
+class OrderStatusUpdateSerializer(serializers.Serializer):
+    """
+    Validates a single status transition for PATCH /api/orders/{id}/status/.
+
+    It checks the target is a real status value; whether the *transition* from
+    the order's current status is legal is the model's job
+    (Order.can_transition_to), enforced in the view where the instance is known.
+    """
+
+    status = serializers.ChoiceField(choices=Order.Status.choices)
+
+
 class OrderCreateSerializer(serializers.Serializer):
     """
     POST /api/orders/ -- turns a client-side cart into a persisted order.

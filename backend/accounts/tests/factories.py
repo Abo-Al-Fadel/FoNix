@@ -47,10 +47,27 @@ class UserFactory(factory.django.DjangoModelFactory):
         return model_class.objects.create_user(*args, **kwargs)
 
 
+class StaffUserFactory(UserFactory):
+    """A workshop staff account -- may manage the catalogue, nothing else."""
+
+    username = factory.Sequence(lambda n: f"worker{n}")
+    email = factory.Sequence(lambda n: f"worker{n}@fonix.test")
+    role = User.Role.STAFF
+
+
 class AdminUserFactory(UserFactory):
-    """A FoNix staff account -- the only kind that may mutate the catalog."""
+    """An admin account -- staff powers plus user and order management."""
 
     username = factory.Sequence(lambda n: f"staff{n}")
     email = factory.Sequence(lambda n: f"staff{n}@fonix.test")
     role = User.Role.ADMIN
+    is_staff = True
+
+
+class OwnerUserFactory(UserFactory):
+    """The owner tier -- the only role that can grant the Owner role."""
+
+    username = factory.Sequence(lambda n: f"owner{n}")
+    email = factory.Sequence(lambda n: f"owner{n}@fonix.test")
+    role = User.Role.OWNER
     is_staff = True

@@ -17,7 +17,7 @@ export default function Navbar() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const { pathname } = useLocation();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, isStaff, user, logout } = useAuth();
   const { itemCount } = useCart();
   const drawerToggleRef = useRef(null);
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -128,6 +128,12 @@ export default function Navbar() {
             ) : null}
           </NavLink>
 
+          {isStaff ? (
+            <NavLink to="/dashboard" className={navLinkClasses}>
+              Dashboard
+            </NavLink>
+          ) : null}
+
           {isAuthenticated ? (
             <>
               <NavLink to="/account" className={navLinkClasses}>
@@ -201,6 +207,13 @@ export default function Navbar() {
                 </li>
               ))}
               <li className="my-1 h-px bg-hairline" aria-hidden="true" />
+              {isStaff ? (
+                <li>
+                  <NavLink to="/dashboard" className={drawerLinkClasses}>
+                    Dashboard
+                  </NavLink>
+                </li>
+              ) : null}
               {isAuthenticated ? (
                 <>
                   <li>

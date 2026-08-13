@@ -20,6 +20,100 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "role")
 
 
+class UserAdminSerializer(serializers.ModelSerializer):
+    """
+    The user-management representation for the control panel (admins and owners).
+
+    Read: identity, role, active state, join/last-login, and two aggregates the
+    dashboard shows -- how many orders the account has placed and what it has
+    spent (both annotated onto the queryset in UserAdminViewSet, never computed
+    per-row here).
+
+    Write: only `role` and `is_active`. Everything else is read-only, so this
+    endpoint can never be used to rewrite someone's email or name. The
+    who-may-touch-whom rules live in CanManageUser (object permission); the
+    what-may-this-change-to rules live in validate() below, which is the only
+    layer that can see both the actor and the requested new values together.
+    """
+
+    role_display = serializers.CharField(source="get_role_display", read_only=True)
+    order_count = serializers.IntegerField(read_only=True)
+    total_spent = serializers.DecimalField(
+        max_digits=14, decimal_places=2, read_only=True
+    )
+
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "role",
+            "role_display",
+            "is_active",
+            "date_joined",
+            "last_login",
+            "order_count",
+            "total_spent",
+        )
+        read_only_fields = (
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "role_display",
+            "date_joined",
+            "last_login",
+            "order_count",
+            "total_spent",
+        )
+
+    def validate_role(self, value: str) -> str:
+        """A caller may only assign a role at or below their own rank.
+
+        This one comparison covers the spec exactly: an admin (rank 2) can set
+        customer/staff/admin but not owner (rank 3); only an owner can grant the
+        owner role. The object-level guardrail in CanManageUser has already
+        established the caller may act on this target at all.
+        """
+        actor = self.context["request"].user
+        if User.ROLE_RANK[value] > actor.role_rank:
+            raise serializers.ValidationError(
+                "You cannot assign a role higher than your own. "
+                "Only an owner can grant the Owner role."
+            )
+        return value
+
+    def validate(self, attrs: dict) -> dict:
+        """Last-owner protection: never leave the shop with no active owner.
+
+        If this change would strip owner-ness from the target -- demoting them
+        out of the owner role, or deactivating them -- and they are the last
+        active owner, refuse it. Without this an owner could accidentally lock
+        every administrator out of the business.
+        """
+        target = self.instance
+        if target is None or not target.is_owner:
+            return attrs
+
+        losing_owner_role = "role" in attrs and attrs["role"] != User.Role.OWNER
+        being_deactivated = attrs.get("is_active") is False
+
+        if losing_owner_role or being_deactivated:
+            active_owners = User.objects.filter(
+                role=User.Role.OWNER, is_active=True
+            ).count()
+            if active_owners <= 1:
+                raise serializers.ValidationError(
+                    "This is the last active owner. Promote another owner before "
+                    "changing or deactivating this account."
+                )
+        return attrs
+
+
 class RegisterSerializer(serializers.ModelSerializer):
     """
     Handles POST /api/auth/register/.

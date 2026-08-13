@@ -67,6 +67,28 @@ class CarModel(models.Model):
         ),
     )
 
+    is_published = models.BooleanField(
+        default=True,
+        help_text=(
+            "Hidden from the public store when unticked. This is the soft-retire "
+            "switch the order model asks for: a car referenced by a past order "
+            "cannot be deleted (OrderItem.car is PROTECT), so it is hidden here "
+            "instead. Staff still see hidden cars in the control panel."
+        ),
+    )
+
+    cost = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
+        # Internal build cost, used only to compute margin in the owner's
+        # dashboard. Never placed on a public serializer -- exposing what a car
+        # costs to build would be a commercial leak.
+        help_text="Internal build cost in GBP. Never exposed publicly; drives profit figures.",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -382,14 +382,20 @@ inherits it - including any you add next month. A customer requesting another
 person's order gets **404**, not 403, because a 403 would confirm that order
 exists.
 
-### 5. Admin-only catalog writes
+### 5. Role-gated writes
 
-`IsAdminOrReadOnly` (`cars/permissions.py`). `GET`/`HEAD`/`OPTIONS` are open;
-everything else requires `user.is_fonix_admin`.
+The catalogue is writable by **staff and above** (`IsStaffOrReadOnly`,
+`cars/permissions.py`): `GET`/`HEAD`/`OPTIONS` are open; everything else requires
+`user.is_staff_member`. Order tracking and user management sit one tier higher,
+behind `IsAdmin`, and granting the Owner role behind `IsOwner`.
 
-Note that "what counts as an admin" is defined in exactly one place - the
-`is_fonix_admin` property on the User model - so changing the rule is a one-line
-edit rather than a search across the codebase.
+"What counts as staff / admin / owner" is defined in exactly one place — the
+rank properties on the User model (`accounts/models.py`) — so each gate is a
+thin wrapper and changing the rule is a one-line edit. The full four-tier model,
+the permission matrix and the user-management guardrails (no self-management,
+owners protected from admins, last-owner protection) are documented in
+[ROLES.md](ROLES.md); the security-critical guardrails are covered by
+`accounts/tests/test_admin_api.py`.
 
 ### 6. Passwords
 

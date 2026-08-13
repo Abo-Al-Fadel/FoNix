@@ -15,6 +15,7 @@ import {
   getRefreshToken,
   setTokens,
 } from "../api/tokens.js";
+import { hasAtLeast } from "../lib/roles.js";
 
 const AuthContext = createContext(null);
 
@@ -98,9 +99,13 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       isAuthenticated: Boolean(user),
-      // Mirrors the server's rule, and is used only to decide what to *show*.
-      // The API enforces the real thing -- see IsAdminOrReadOnly.
-      isAdmin: user?.role === "admin",
+      // The three role tiers, mirrored from the server hierarchy and used only
+      // to decide what to *show*. The API enforces the real thing -- see the
+      // IsStaffMember / IsAdmin / IsOwner permission classes. `isAdmin` keeps
+      // its old name and now means "admin or owner", matching the backend.
+      isStaff: hasAtLeast(user?.role, "staff"),
+      isAdmin: hasAtLeast(user?.role, "admin"),
+      isOwner: hasAtLeast(user?.role, "owner"),
       isRestoring,
       signIn,
       signUp,

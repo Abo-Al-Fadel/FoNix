@@ -8,6 +8,7 @@ import {
   ErrorState,
   LoadingState,
 } from "../components/ui/StateBlock.jsx";
+import StatusPill from "../components/ui/StatusPill.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import useApiResource from "../hooks/useApiResource.js";
 import { formatDate, formatPrice } from "../lib/format.js";
@@ -112,18 +113,3 @@ export default function Account() {
   );
 }
 
-function StatusPill({ status, children }) {
-  const tone =
-    {
-      confirmed: "border-ember/50 text-ember",
-      cancelled: "border-hairline text-faint",
-    }[status] ?? "border-hairline text-muted";
-
-  return (
-    <span
-      className={`rounded-full border px-3 py-1.5 font-body text-[10px] font-medium uppercase tracking-[0.16em] ${tone}`}
-    >
-      {children}
-    </span>
-  );
-}

@@ -69,3 +69,56 @@ export async function sendContactMessage(payload) {
   const { data } = await api.post("/contact/", payload);
   return data;
 }
+
+// --- Control panel (staff and above) ---------------------------------------
+//
+// These hit endpoints the server gates by role. The UI hides the links that
+// reach them, but that is convenience only -- a customer who calls these
+// directly gets a 403 from DRF. See src/lib/roles.js and the backend's
+// permission classes.
+
+/**
+ * Advance an order's fulfilment status (admin+). The server validates that the
+ * transition is legal and returns the updated order.
+ */
+export async function updateOrderStatus(orderId, status) {
+  const { data } = await api.patch(`/orders/${orderId}/status/`, { status });
+  return data;
+}
+
+// The car list/detail already come from fetchCars/fetchCar; for staff those
+// same endpoints return the fuller admin shape (including cost and
+// is_published) and every car, hidden ones included.
+
+export async function createCar(payload) {
+  // multipart, because a new car carries an uploaded thumbnail file.
+  const { data } = await api.post("/cars/", payload, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
+export async function updateCar(slug, payload) {
+  // PATCH so unchanged fields (including the existing thumbnail) are left alone.
+  const isMultipart = typeof FormData !== "undefined" && payload instanceof FormData;
+  const { data } = await api.patch(`/cars/${slug}/`, payload, {
+    headers: isMultipart ? { "Content-Type": "multipart/form-data" } : undefined,
+  });
+  return data;
+}
+
+export async function deleteCar(slug) {
+  await api.delete(`/cars/${slug}/`);
+}
+
+// --- User management (admin and above) -------------------------------------
+
+export async function fetchUsers() {
+  const { data } = await api.get("/admin/users/");
+  return data.results ?? data;
+}
+
+export async function updateUser(id, patch) {
+  const { data } = await api.patch(`/admin/users/${id}/`, patch);
+  return data;
+}

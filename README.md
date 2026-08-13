@@ -14,13 +14,15 @@ someone else's intellectual property rather than demonstrating anything.
 |---|---|
 | **README.md** (this file) | How to run it, the API, the design decisions |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | A request traced end to end; the data model and every security measure explained |
+| [ROLES.md](ROLES.md) | The four account tiers, the control panel, the permission matrix and every guardrail |
 | [LEARNING.md](LEARNING.md) | Nine hands-on Django exercises with exact commands - start here if you're learning |
 | [DATABASE.md](DATABASE.md) | What database you're using, SQLite vs Postgres, how to switch, fix and reset it, and how to reach the Django admin |
 | [REVIEW_NOTES.md](REVIEW_NOTES.md) | Bugs found and fixed, and the results of an adversarial security probe |
 
 ### Verified
 
-- **88** backend tests (`python manage.py test`)
+- **121** backend tests (`python manage.py test`)
+- **44** frontend unit tests (`npm test` in `frontend/`)
 - **32** end-to-end browser checks (`node tools/e2e-checklist.mjs`)
 - **21** adversarial security checks (`node tools/security-probe.mjs`)
 
@@ -139,7 +141,36 @@ is no second copy to drift out of sync.
 | POST/PATCH/DELETE | `/api/cars/{slug}/` | Admin only |
 | GET/POST | `/api/orders/` | Authenticated, scoped to the caller |
 | GET | `/api/orders/{id}/` | Authenticated, must own it (or be admin) |
+| PATCH | `/api/orders/{id}/status/` | Admin only (advance fulfilment stage) |
+| GET/PATCH | `/api/admin/users/` `…/{id}/` | Admin only (user & role management) |
 | POST | `/api/contact/` | Public, rate-limited |
+
+Catalogue writes (`POST/PATCH/DELETE /api/cars/`) are open to **staff and
+above**, not just admins — managing the catalogue is the Staff tier's job. See
+[ROLES.md](ROLES.md) for the full four-tier model and its guardrails.
+
+---
+
+## The control panel
+
+A role-aware admin dashboard is built into the React app at **`/dashboard`**
+(staff and above see a link in the navbar). It is a bespoke panel in the site's
+own design language — not Django's admin, which stays available to superusers at
+`/admin/` on the API.
+
+Four account tiers — **Customer → Staff → Admin → Owner** — decide what each
+account can reach: staff manage the catalogue (add/edit/hide cars); admins also
+track orders through fulfilment and manage users and roles; owners additionally
+grant the Owner role. Every rule is enforced server-side and mirrored in the UI.
+The full matrix and its guardrails (no self-management, owners protected from
+admins, last-owner protection, deactivate-not-delete) are in [ROLES.md](ROLES.md).
+
+To try it locally, seed a demo team and sign in:
+
+```bash
+cd backend
+python manage.py seed_team   # creates owner/admin/staff demos, promotes your superuser to Owner
+```
 
 ---
 

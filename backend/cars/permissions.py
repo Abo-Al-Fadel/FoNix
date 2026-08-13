@@ -1,14 +1,19 @@
 from rest_framework import permissions
 
 
-class IsAdminOrReadOnly(permissions.BasePermission):
+class IsStaffOrReadOnly(permissions.BasePermission):
     """
-    Anyone may read the catalog; only FoNix admins may change it.
+    Anyone may read the catalog; only FoNix staff (Staff, Admin or Owner) may
+    change it.
 
-    The alternative -- an `if request.user.role != "admin": raise PermissionDenied`
-    at the top of every mutating view -- is how endpoints get missed. Expressing
-    it as a permission class means the rule is declared once and DRF applies it
-    to every action on the ViewSet, including ones added later.
+    The alternative -- an `if not request.user.is_staff_member: raise
+    PermissionDenied` at the top of every mutating view -- is how endpoints get
+    missed. Expressing it as a permission class means the rule is declared once
+    and DRF applies it to every action on the ViewSet, including ones added later.
+
+    Managing the catalogue is the Staff tier's whole job, so this gate is
+    `is_staff_member`, not `is_admin`: a workshop staffer can add, edit and hide
+    cars without being able to touch users or orders.
     """
 
     message = "Only FoNix staff accounts can modify the catalog."
@@ -22,5 +27,10 @@ class IsAdminOrReadOnly(permissions.BasePermission):
 
         user = request.user
         # Delegates to the user model rather than comparing the role string
-        # here, so "what is an admin" stays defined in exactly one place.
-        return bool(user and user.is_authenticated and user.is_fonix_admin)
+        # here, so "what is staff" stays defined in exactly one place.
+        return bool(user and user.is_authenticated and user.is_staff_member)
+
+
+# Old name kept as an alias so nothing importing IsAdminOrReadOnly breaks. The
+# gate is now staff-and-above, which is a superset of the old admin-only rule.
+IsAdminOrReadOnly = IsStaffOrReadOnly

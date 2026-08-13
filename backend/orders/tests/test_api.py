@@ -284,3 +284,72 @@ class OrderMutationTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         self.assertEqual(Order.objects.count(), 1)
+
+
+class OrderStatusTrackingTests(APITestCase):
+    """PATCH /api/orders/{id}/status/ -- the admin fulfilment action."""
+
+    def setUp(self):
+        self.customer = UserFactory()
+        self.order = OrderFactory(user=self.customer)
+        self.url = reverse("orders:order-set-status", kwargs={"pk": self.order.pk})
+
+    def test_a_customer_cannot_advance_their_own_order(self):
+        # The whole point of a status field is that the shop controls it, not
+        # the buyer. A customer marking their own order "confirmed" is exactly
+        # what this must forbid.
+        self.client.force_authenticate(user=self.customer)
+
+        response = self.client.patch(self.url, {"status": Order.Status.CONFIRMED})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.Status.PENDING)
+
+    def test_an_admin_can_advance_an_order_one_stage(self):
+        self.client.force_authenticate(user=AdminUserFactory())
+
+        response = self.client.patch(self.url, {"status": Order.Status.CONFIRMED})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.Status.CONFIRMED)
+
+    def test_an_illegal_transition_is_rejected(self):
+        # Pending -> Delivered skips the whole fulfilment chain.
+        self.client.force_authenticate(user=AdminUserFactory())
+
+        response = self.client.patch(self.url, {"status": Order.Status.DELIVERED})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.Status.PENDING)
+
+    def test_an_order_can_be_cancelled_from_pending(self):
+        self.client.force_authenticate(user=AdminUserFactory())
+
+        response = self.client.patch(self.url, {"status": Order.Status.CANCELLED})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.Status.CANCELLED)
+
+    def test_a_delivered_order_is_terminal(self):
+        self.order.status = Order.Status.DELIVERED
+        self.order.save(update_fields=["status"])
+        self.client.force_authenticate(user=AdminUserFactory())
+
+        response = self.client.patch(self.url, {"status": Order.Status.CANCELLED})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_the_customer_still_sees_the_updated_status_on_their_order(self):
+        self.order.status = Order.Status.IN_PRODUCTION
+        self.order.save(update_fields=["status"])
+        self.client.force_authenticate(user=self.customer)
+
+        detail = reverse("orders:order-detail", kwargs={"pk": self.order.pk})
+        response = self.client.get(detail)
+
+        self.assertEqual(response.data["status"], Order.Status.IN_PRODUCTION)
+        self.assertEqual(response.data["status_display"], "In production")

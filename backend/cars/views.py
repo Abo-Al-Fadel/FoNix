@@ -1,8 +1,8 @@
 from rest_framework import viewsets
 
 from .models import CarModel
-from .permissions import IsAdminOrReadOnly
-from .serializers import CarDetailSerializer, CarListSerializer
+from .permissions import IsStaffOrReadOnly
+from .serializers import CarAdminSerializer, CarDetailSerializer, CarListSerializer
 
 
 class CarModelViewSet(viewsets.ModelViewSet):
@@ -14,14 +14,24 @@ class CarModelViewSet(viewsets.ModelViewSet):
     urls.py. The permission class decides which of them a given caller may
     reach, so there is no per-action boilerplate here at all -- that is what
     "thin views" looks like in DRF.
+
+    Staff see more than the public does, through the same endpoint: hidden
+    (unpublished) cars, and the internal `cost`/`is_published` fields. That is
+    driven by the caller's role in get_queryset and get_serializer_class rather
+    than a separate admin route, so there is one catalogue API, not two to keep
+    in sync.
     """
 
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsStaffOrReadOnly]
 
     # Look cars up by slug instead of the default pk, so URLs read
     # /api/cars/ignis/ and the frontend can route on the same human-readable
     # identifier it puts in its own URLs.
     lookup_field = "slug"
+
+    def _is_staff(self) -> bool:
+        user = self.request.user
+        return bool(user and user.is_authenticated and user.is_staff_member)
 
     def get_queryset(self):
         """
@@ -40,14 +50,26 @@ class CarModelViewSet(viewsets.ModelViewSet):
 
         No select_related is needed anywhere here: CarModel has no forward
         ForeignKey. It would be cargo-culting to add one.
+
+        Visibility: the public only ever sees published cars. Staff see every
+        car, so they can find and un-hide a retired one. Filtering in the
+        queryset (not the serializer) means a hidden car is a 404 to a shopper
+        who guesses its slug, not merely absent from the list.
         """
         queryset = CarModel.objects.all()
+        if not self._is_staff():
+            queryset = queryset.filter(is_published=True)
         if self.action == "retrieve":
             queryset = queryset.prefetch_related("images")
         return queryset
 
     def get_serializer_class(self):
-        # The light serializer for the grid, the full one for a product page.
+        # Staff get the fuller admin serializer for every action: it carries the
+        # cost and is_published fields they manage, and makes thumbnail_alt
+        # writable. The public gets the light grid serializer for the list and
+        # the read-only detail serializer for a product page.
+        if self._is_staff():
+            return CarAdminSerializer
         if self.action == "list":
             return CarListSerializer
         return CarDetailSerializer

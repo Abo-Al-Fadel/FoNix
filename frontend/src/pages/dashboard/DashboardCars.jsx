@@ -98,6 +98,7 @@ export default function DashboardCars() {
               <tr className="border-b border-hairline bg-graphite/40 font-body text-[10px] uppercase tracking-[0.16em] text-faint">
                 <th className="px-4 py-3 font-medium">Model</th>
                 <th className="px-4 py-3 font-medium">Price</th>
+                <th className="px-4 py-3 font-medium">Slots</th>
                 <th className="px-4 py-3 font-medium">Visibility</th>
                 <th className="px-4 py-3 text-right font-medium">Actions</th>
               </tr>
@@ -133,6 +134,10 @@ export default function DashboardCars() {
                   </td>
                   <td className="px-4 py-3 font-body text-sm text-muted">
                     {formatPrice(car.base_price)}
+                  </td>
+                  <td className="px-4 py-3 font-body text-sm text-muted">
+                    {car.slots_remaining ?? "—"}
+                    {car.allocation_open === false ? " · closed" : ""}
                   </td>
                   <td className="px-4 py-3">
                     <span

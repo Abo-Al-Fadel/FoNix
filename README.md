@@ -140,10 +140,11 @@ is no second copy to drift out of sync.
 | GET/PATCH | `/api/auth/me/` | Authenticated |
 | GET | `/api/cars/` | Public |
 | GET | `/api/cars/{slug}/` | Public |
-| POST/PATCH/DELETE | `/api/cars/{slug}/` | Admin only |
-| GET/POST | `/api/orders/` | Authenticated, scoped to the caller |
-| GET | `/api/orders/{id}/` | Authenticated, must own it (or be admin) |
-| PATCH | `/api/orders/{id}/status/` | Admin only (advance fulfilment stage) |
+| POST/PATCH/DELETE | `/api/cars/{slug}/` | Staff and above |
+| GET/POST | `/api/orders/` | Authenticated. Staff see every order; `?mine=1` always own |
+| GET | `/api/orders/{id}/` | Owner, or staff and above |
+| POST | `/api/orders/{id}/cancel/` | Buyer, pending only (restores the slot) |
+| PATCH | `/api/orders/{id}/status/` | Admin/owner fulfilment |
 | GET/PATCH | `/api/admin/users/` `…/{id}/` | Admin only (user & role management) |
 | POST | `/api/contact/` | Public, rate-limited |
 
@@ -161,9 +162,9 @@ own design language — not Django's admin, which stays available to superusers 
 `/admin/` on the API.
 
 Four account tiers — **Customer → Staff → Admin → Owner** — decide what each
-account can reach: staff manage the catalogue (add/edit/hide cars); admins also
-track orders through fulfilment and manage users and roles; owners additionally
-grant the Owner role. Every rule is enforced server-side and mirrored in the UI.
+account can reach: staff manage the catalogue and can read every allocation;
+admins also advance fulfilment and manage users; owners additionally grant the
+Owner role. Every rule is enforced server-side and mirrored in the UI.
 The full matrix and its guardrails (no self-management, owners protected from
 admins, last-owner protection, deactivate-not-delete) are in [ROLES.md](ROLES.md).
 
@@ -236,13 +237,16 @@ mobile frames are held at 1200 wide rather than a lighter 800 so they stay crisp
 on a high-DPR phone screen. Rebuild the mobile set with
 `tools/build_mobile_frames.py`.
 
-### Admins see every order
+### Staff see every order; `/account` does not
 
-`GET /api/orders/` returns all orders to a FoNix admin and only their own to a
-customer. An admin is the person who fulfils orders, so an order list they
-cannot read would make the role pointless. Customers are scoped in the queryset
-itself (`OrderQuerySet.for_user`), not by a filter applied afterwards, so the
-restriction cannot be bypassed by any action on the ViewSet.
+`GET /api/orders/` returns all orders to staff and above, and only their own to
+a customer. Fulfilment is an admin action; staff need the list to answer the
+phone. `/account` always calls `?mine=1`, so an admin's personal page never
+dumps everyone else's allocations.
+
+A customer may cancel **while the order is pending**. That returns the held
+build slot. After confirm, only admin/owner can cancel, and a delivered order
+is terminal.
 
 Requesting another customer's order returns **404, not 403** - a 403 would
 confirm that the order exists, which a stranger has no business learning.

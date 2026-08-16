@@ -4,11 +4,18 @@ from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
 from django.test import TestCase
 
-from accounts.tests.factories import UserFactory
+from accounts.tests.factories import StaffUserFactory, UserFactory
 from cars.tests.factories import CarModelFactory
 from orders.models import Order, OrderItem
 
 from .factories import OrderFactory, OrderItemFactory
+
+COLLECT = {
+    "method": "collect",
+    "full_name": "Ada Lovelace",
+    "phone": "0117 000 0000",
+    "country": "United Kingdom",
+}
 
 
 class OrderTotalTests(TestCase):
@@ -51,7 +58,7 @@ class OrderCreationTests(TestCase):
     def test_it_creates_the_order_and_all_of_its_lines(self):
         user = UserFactory()
         ignis = CarModelFactory(base_price=Decimal("2400000.00"))
-        aurea = CarModelFactory(base_price=Decimal("890000.00"))
+        aurea = CarModelFactory(base_price=Decimal("890000.00"), max_order_quantity=2)
 
         order = Order.create_from_cart(
             user=user,
@@ -59,6 +66,7 @@ class OrderCreationTests(TestCase):
                 {"car": ignis, "quantity": 1},
                 {"car": aurea, "quantity": 2},
             ],
+            delivery=COLLECT,
         )
 
         self.assertEqual(order.user, user)
@@ -71,7 +79,9 @@ class OrderCreationTests(TestCase):
         car = CarModelFactory(base_price=Decimal("2400000.00"))
 
         order = Order.create_from_cart(
-            user=user, cart_items=[{"car": car, "quantity": 1}]
+            user=user,
+            cart_items=[{"car": car, "quantity": 1}],
+            delivery=COLLECT,
         )
 
         self.assertEqual(order.items.first().price_at_purchase, Decimal("2400000.00"))
@@ -84,7 +94,9 @@ class OrderCreationTests(TestCase):
         user = UserFactory()
         car = CarModelFactory(base_price=Decimal("2400000.00"))
         order = Order.create_from_cart(
-            user=user, cart_items=[{"car": car, "quantity": 1}]
+            user=user,
+            cart_items=[{"car": car, "quantity": 1}],
+            delivery=COLLECT,
         )
 
         car.base_price = Decimal("3000000.00")
@@ -162,3 +174,10 @@ class OrderScopingTests(TestCase):
         admin = AdminUserFactory()
 
         self.assertEqual(Order.objects.for_user(admin).count(), 2)
+
+    def test_a_staff_member_sees_every_order(self):
+        OrderFactory()
+        OrderFactory()
+        staff = StaffUserFactory()
+
+        self.assertEqual(Order.objects.for_user(staff).count(), 2)

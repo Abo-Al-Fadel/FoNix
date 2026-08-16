@@ -9,11 +9,42 @@ import {
 
 const CartContext = createContext(null);
 
-const STORAGE_KEY = "fonix.cart.v1";
-// Versioned key. If the stored line shape ever changes, bumping to v2 retires
-// every old cart cleanly instead of feeding stale objects into new code.
+const STORAGE_KEY = "fonix.cart.v2";
+// Versioned key. v1 stored quantity up to 10 and no options; bumping retires
+// those carts instead of feeding the old shape into allocation checkout.
 
-const MAX_QUANTITY = 10; // Mirrors the server's per-line cap.
+const DEFAULT_MAX_QUANTITY = 1;
+
+function maxFor(car, line) {
+  return Math.max(
+    1,
+    Number(car?.max_order_quantity ?? line?.maxQuantity ?? DEFAULT_MAX_QUANTITY),
+  );
+}
+
+function configuredPrice(car, options) {
+  const extra = (options ?? []).reduce(
+    (sum, option) => sum + Number(option.price_delta || 0),
+    0,
+  );
+  return Number(car.base_price) + extra;
+}
+
+function toLine(car, quantity, options) {
+  const maxQuantity = maxFor(car);
+  const selected = options ?? [];
+  return {
+    slug: car.slug,
+    name: car.name,
+    price: configuredPrice(car, selected),
+    thumbnail: car.thumbnail,
+    thumbnailAlt: car.thumbnail_alt,
+    quantity: Math.min(quantity, maxQuantity),
+    maxQuantity,
+    optionIds: selected.map((option) => option.id),
+    optionLabels: selected.map((option) => option.name),
+  };
+}
 
 /**
  * Cart state is a reducer rather than a pile of useState calls.
@@ -22,47 +53,41 @@ const MAX_QUANTITY = 10; // Mirrors the server's per-line cap.
  * reducer makes that explicit and testable. It also removes a real bug class:
  * with useState, two rapid clicks on "add" can both read the same stale array
  * and one increment is lost. A reducer always sees the latest state.
+ *
+ * One line per car: the API unique-constrains (order, car), so a second add
+ * of the same slug replaces the configuration rather than duplicating it.
  */
 function cartReducer(lines, action) {
   switch (action.type) {
     case "add": {
-      const { car, quantity } = action;
+      const { car, quantity, options } = action;
+      const next = toLine(car, quantity, options);
       const existing = lines.find((line) => line.slug === car.slug);
 
       if (existing) {
+        const cap = maxFor(car, existing);
         return lines.map((line) =>
           line.slug === car.slug
             ? {
-                ...line,
-                quantity: Math.min(line.quantity + quantity, MAX_QUANTITY),
+                ...next,
+                quantity: Math.min(existing.quantity, cap),
               }
             : line,
         );
       }
 
-      return [
-        ...lines,
-        {
-          // Only the fields the cart page renders are stored, plus the slug the
-          // checkout posts. Deliberately *not* the whole car object: a cart
-          // sitting in localStorage for a week should not resurrect a stale
-          // description, and the price shown is re-verified server-side at
-          // checkout anyway.
-          slug: car.slug,
-          name: car.name,
-          price: car.base_price,
-          thumbnail: car.thumbnail,
-          thumbnailAlt: car.thumbnail_alt,
-          quantity: Math.min(quantity, MAX_QUANTITY),
-        },
-      ];
+      return [...lines, next];
     }
 
     case "setQuantity": {
-      const quantity = Math.max(1, Math.min(action.quantity, MAX_QUANTITY));
-      return lines.map((line) =>
-        line.slug === action.slug ? { ...line, quantity } : line,
-      );
+      return lines.map((line) => {
+        if (line.slug !== action.slug) return line;
+        const cap = maxFor(null, line);
+        return {
+          ...line,
+          quantity: Math.max(1, Math.min(action.quantity, cap)),
+        };
+      });
     }
 
     case "remove":
@@ -120,8 +145,8 @@ export function CartProvider({ children }) {
     }
   }, [lines]);
 
-  const addItem = useCallback((car, quantity = 1) => {
-    dispatch({ type: "add", car, quantity });
+  const addItem = useCallback((car, quantity = 1, options = []) => {
+    dispatch({ type: "add", car, quantity, options });
   }, []);
 
   const setQuantity = useCallback((slug, quantity) => {
@@ -154,7 +179,7 @@ export function CartProvider({ children }) {
       setQuantity,
       removeItem,
       clearCart,
-      maxQuantity: MAX_QUANTITY,
+      maxQuantity: DEFAULT_MAX_QUANTITY,
     };
   }, [lines, addItem, setQuantity, removeItem, clearCart]);
 

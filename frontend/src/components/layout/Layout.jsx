@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from "react-router-dom";
 
+import useDocumentMeta from "../../hooks/useDocumentMeta.js";
 import usePageTitle from "../../hooks/usePageTitle.js";
 import { titleForPath } from "../../lib/pageTitle.js";
 import Footer from "./Footer.jsx";
@@ -14,6 +15,7 @@ import Navbar from "./Navbar.jsx";
 export default function Layout() {
   const { pathname } = useLocation();
   usePageTitle(titleForPath(pathname));
+  useDocumentMeta(pathname);
 
   // The homepage hero starts at the very top of the viewport with the navbar
   // floating over it. Every other page needs top padding, or its heading would

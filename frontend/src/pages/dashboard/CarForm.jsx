@@ -18,14 +18,33 @@ const EMPTY = {
   range_km: "",
   top_speed_kmh: "",
   acceleration_0_100: "",
+  power_kw: "",
+  torque_nm: "",
+  weight_kg: "",
+  battery_kwh: "",
+  charge_10_80_min: "",
+  ac_kw: "",
+  length_mm: "",
+  width_mm: "",
+  height_mm: "",
+  seats: "2",
+  drivetrain: "",
+  motor_count: "1",
+  body_style: "",
+  warranty_years: "4",
+  service_interval: "",
+  country_of_build: "United Kingdom",
+  homologation: "",
+  slots_remaining: "12",
+  lead_time_weeks: "16",
+  max_order_quantity: "1",
   thumbnail_alt: "",
   is_hero: false,
   has_real_imagery: false,
   is_published: true,
+  allocation_open: true,
 };
 
-// Which form values become multipart fields, and how they map back from a
-// fetched car. Kept as one list so add and edit stay in step.
 const TEXT_FIELDS = [
   "name",
   "tagline",
@@ -35,9 +54,29 @@ const TEXT_FIELDS = [
   "range_km",
   "top_speed_kmh",
   "acceleration_0_100",
+  "power_kw",
+  "torque_nm",
+  "weight_kg",
+  "battery_kwh",
+  "charge_10_80_min",
+  "ac_kw",
+  "length_mm",
+  "width_mm",
+  "height_mm",
+  "seats",
+  "drivetrain",
+  "motor_count",
+  "body_style",
+  "warranty_years",
+  "service_interval",
+  "country_of_build",
+  "homologation",
+  "slots_remaining",
+  "lead_time_weeks",
+  "max_order_quantity",
   "thumbnail_alt",
 ];
-const BOOL_FIELDS = ["is_hero", "has_real_imagery", "is_published"];
+const BOOL_FIELDS = ["is_hero", "has_real_imagery", "is_published", "allocation_open"];
 
 export default function CarForm() {
   const { slug } = useParams();
@@ -176,6 +215,43 @@ export default function CarForm() {
           />
         </div>
 
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Power (kW)" type="number" value={form.power_kw} onChange={update("power_kw")} />
+          <Field label="Torque (Nm)" type="number" value={form.torque_nm} onChange={update("torque_nm")} />
+          <Field label="Weight (kg)" type="number" value={form.weight_kg} onChange={update("weight_kg")} />
+          <Field label="Battery (kWh)" type="number" step="0.1" value={form.battery_kwh} onChange={update("battery_kwh")} />
+          <Field label="DC 10–80 (min)" type="number" value={form.charge_10_80_min} onChange={update("charge_10_80_min")} />
+          <Field label="AC charge (kW)" type="number" step="0.1" value={form.ac_kw} onChange={update("ac_kw")} />
+          <Field label="Length (mm)" type="number" value={form.length_mm} onChange={update("length_mm")} />
+          <Field label="Width (mm)" type="number" value={form.width_mm} onChange={update("width_mm")} />
+          <Field label="Height (mm)" type="number" value={form.height_mm} onChange={update("height_mm")} />
+          <Field label="Seats" type="number" value={form.seats} onChange={update("seats")} />
+          <Field label="Drivetrain" value={form.drivetrain} onChange={update("drivetrain")} />
+          <Field label="Motors" type="number" value={form.motor_count} onChange={update("motor_count")} />
+          <Field
+            label="Body style"
+            value={form.body_style}
+            onChange={update("body_style")}
+            hint="coupe, gt, track, saloon or suv"
+          />
+          <Field label="Warranty (years)" type="number" value={form.warranty_years} onChange={update("warranty_years")} />
+          <Field label="Service interval" value={form.service_interval} onChange={update("service_interval")} />
+          <Field label="Built in" value={form.country_of_build} onChange={update("country_of_build")} />
+          <Field label="Homologation" value={form.homologation} onChange={update("homologation")} />
+        </div>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Slots remaining" type="number" value={form.slots_remaining} onChange={update("slots_remaining")} />
+          <Field label="Lead time (weeks)" type="number" value={form.lead_time_weeks} onChange={update("lead_time_weeks")} />
+          <Field
+            label="Max per order"
+            type="number"
+            value={form.max_order_quantity}
+            onChange={update("max_order_quantity")}
+            hint="An allocation is one car unless you raise this."
+          />
+        </div>
+
         <div>
           <label className="block font-body text-xs font-medium uppercase tracking-[0.14em] text-muted">
             Thumbnail {isEdit ? "(leave blank to keep current)" : ""}
@@ -198,6 +274,7 @@ export default function CarForm() {
         <div className="space-y-3 rounded-card border border-hairline bg-graphite/40 p-5">
           {[
             { key: "is_published", label: "Live in the public store" },
+            { key: "allocation_open", label: "Allocation open (otherwise the store shows a waitlist)" },
             { key: "has_real_imagery", label: "Has real photography (no “visualisation pending” badge)" },
             { key: "is_hero", label: "Flagship on the homepage" },
           ].map((toggle) => (

@@ -13,16 +13,14 @@ import useApiResource from "../../hooks/useApiResource.js";
  * at-a-glance.
  */
 export default function DashboardHome() {
-  const { isAdmin } = useAuth();
+  const { isStaff, isAdmin } = useAuth();
 
   const carsFetcher = useCallback(() => fetchCars(), []);
   const ordersFetcher = useCallback(() => fetchOrders(), []);
   const usersFetcher = useCallback(() => fetchUsers(), []);
 
   const { data: cars } = useApiResource(carsFetcher);
-  // Only admins may call these endpoints; `enabled` keeps staff from firing a
-  // request the server would 403.
-  const { data: orders } = useApiResource(ordersFetcher, { enabled: isAdmin });
+  const { data: orders } = useApiResource(ordersFetcher, { enabled: isStaff });
   const { data: users } = useApiResource(usersFetcher, { enabled: isAdmin });
 
   const publishedCars = cars?.filter((c) => c.is_published !== false).length;
@@ -32,7 +30,7 @@ export default function DashboardHome() {
 
   const tiles = [
     { label: "Cars in catalogue", value: cars?.length, sub: `${publishedCars ?? "—"} live`, to: "/dashboard/cars" },
-    isAdmin && { label: "Orders", value: orders?.length, sub: `${pendingOrders ?? "—"} in progress`, to: "/dashboard/orders" },
+    isStaff && { label: "Orders", value: orders?.length, sub: `${pendingOrders ?? "—"} in progress`, to: "/dashboard/orders" },
     isAdmin && { label: "Accounts", value: users?.length, sub: "registered", to: "/dashboard/users" },
   ].filter(Boolean);
 

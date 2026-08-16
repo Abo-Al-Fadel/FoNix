@@ -14,7 +14,7 @@ from accounts.tests.factories import (
 )
 from cars.models import CarModel
 
-from .factories import CarImageFactory, CarModelFactory
+from .factories import CarImageFactory, CarModelFactory, CarOptionFactory
 
 
 def tiny_image(name: str = "thumb.png") -> SimpleUploadedFile:
@@ -55,6 +55,9 @@ class CarListAPITests(APITestCase):
         self.assertEqual(car["base_price"], "2400000.00")
         self.assertIn("thumbnail", car)
         self.assertIn("thumbnail_alt", car)
+        self.assertIn("body_style", car)
+        self.assertIn("slots_remaining", car)
+        self.assertIn("allocation_open", car)
         # The heavy fields belong to the detail endpoint only.
         self.assertNotIn("description", car)
         self.assertNotIn("images", car)
@@ -101,17 +104,27 @@ class CarDetailAPITests(APITestCase):
             response.data["images"][0]["alt_text"], "Front three-quarter view."
         )
 
+    def test_detail_includes_the_spec_sheet_and_options(self):
+        CarOptionFactory(car=self.car, name="Obsidian", is_default=True)
+
+        response = self.client.get(self.url)
+
+        self.assertIn("power_kw", response.data)
+        self.assertIn("options", response.data)
+        self.assertEqual(response.data["options"][0]["name"], "Obsidian")
+        self.assertIn("slots_remaining", response.data)
+
     def test_an_unknown_slug_is_a_404(self):
         url = reverse("cars:carmodel-detail", kwargs={"slug": "does-not-exist"})
 
         self.assertEqual(self.client.get(url).status_code, status.HTTP_404_NOT_FOUND)
 
     def test_the_gallery_is_prefetched_rather_than_queried_per_image(self):
-        """One query for the car, one for all of its images -- not one per image."""
+        """One query for the car, one for its images, one for its options."""
         for _ in range(5):
             CarImageFactory(car=self.car)
 
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(3):
             self.client.get(self.url)
 
 

@@ -9,7 +9,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 const NAV = [
   { to: "/dashboard", label: "Overview", min: "staff", end: true },
   { to: "/dashboard/cars", label: "Cars", min: "staff" },
-  { to: "/dashboard/orders", label: "Orders", min: "admin" },
+  { to: "/dashboard/orders", label: "Orders", min: "staff" },
   { to: "/dashboard/users", label: "Users", min: "admin" },
 ];
 

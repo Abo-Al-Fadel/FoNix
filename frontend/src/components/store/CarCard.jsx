@@ -51,10 +51,14 @@ export default function CarCard({ car }) {
         ) : null}
 
         {car.is_hero ? (
-          /* ember-deep, not ember: white text this small on the lighter accent
-             only reaches ~3.5:1, short of the 4.5:1 WCAG AA needs. */
           <span className="absolute right-4 top-4 rounded-full bg-ember-deep px-3 py-1.5 font-body text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
             Flagship
+          </span>
+        ) : null}
+
+        {!car.allocation_open || car.slots_remaining === 0 ? (
+          <span className="absolute bottom-4 left-4 rounded-full border border-hairline bg-void/80 px-3 py-1.5 font-body text-[10px] font-medium uppercase tracking-[0.16em] text-muted">
+            Waitlist
           </span>
         ) : null}
       </div>

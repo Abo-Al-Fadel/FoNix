@@ -20,7 +20,7 @@ from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from cars.models import CarImage, CarModel
+from cars.models import CarImage, CarModel, CarOption
 
 from ._placeholder_art import render_placeholder
 
@@ -198,6 +198,146 @@ CATALOG = [
 ]
 
 
+SPECS = {
+    "ignis": {
+        "power_kw": 1847,
+        "torque_nm": 3200,
+        "weight_kg": 1420,
+        "battery_kwh": Decimal("112.0"),
+        "charge_10_80_min": 18,
+        "ac_kw": Decimal("22.0"),
+        "length_mm": 4580,
+        "width_mm": 1988,
+        "height_mm": 1142,
+        "seats": 2,
+        "drivetrain": "Quad-motor AWD",
+        "motor_count": 4,
+        "body_style": "coupe",
+        "warranty_years": 4,
+        "service_interval": "Every 20,000 km or 12 months",
+        "country_of_build": "United Kingdom",
+        "homologation": "UK / EU",
+        "slots_remaining": 12,
+        "lead_time_weeks": 18,
+    },
+    "aurea": {
+        "power_kw": 680,
+        "torque_nm": 980,
+        "weight_kg": 1780,
+        "battery_kwh": Decimal("126.0"),
+        "charge_10_80_min": 22,
+        "ac_kw": Decimal("22.0"),
+        "length_mm": 4920,
+        "width_mm": 1935,
+        "height_mm": 1340,
+        "seats": 4,
+        "drivetrain": "Dual-motor AWD",
+        "motor_count": 2,
+        "body_style": "gt",
+        "warranty_years": 5,
+        "service_interval": "Every 25,000 km or 12 months",
+        "country_of_build": "United Kingdom",
+        "homologation": "UK / EU",
+        "slots_remaining": 28,
+        "lead_time_weeks": 22,
+    },
+    "cinder": {
+        "power_kw": 1100,
+        "torque_nm": 1450,
+        "weight_kg": 1310,
+        "battery_kwh": Decimal("82.0"),
+        "charge_10_80_min": 16,
+        "ac_kw": Decimal("11.0"),
+        "length_mm": 4510,
+        "width_mm": 2010,
+        "height_mm": 1128,
+        "seats": 2,
+        "drivetrain": "Quad-motor AWD",
+        "motor_count": 4,
+        "body_style": "track",
+        "warranty_years": 3,
+        "service_interval": "Every 10,000 km or after a race weekend",
+        "country_of_build": "United Kingdom",
+        "homologation": "UK / EU track-day",
+        "slots_remaining": 8,
+        "lead_time_weeks": 26,
+    },
+    "vesper": {
+        "power_kw": 510,
+        "torque_nm": 720,
+        "weight_kg": 1960,
+        "battery_kwh": Decimal("118.0"),
+        "charge_10_80_min": 24,
+        "ac_kw": Decimal("22.0"),
+        "length_mm": 5010,
+        "width_mm": 1910,
+        "height_mm": 1448,
+        "seats": 4,
+        "drivetrain": "Dual-motor AWD",
+        "motor_count": 2,
+        "body_style": "saloon",
+        "warranty_years": 5,
+        "service_interval": "Every 25,000 km or 12 months",
+        "country_of_build": "United Kingdom",
+        "homologation": "UK / EU",
+        "slots_remaining": 40,
+        "lead_time_weeks": 14,
+    },
+    "lumen": {
+        "power_kw": 310,
+        "torque_nm": 450,
+        "weight_kg": 1485,
+        "battery_kwh": Decimal("74.0"),
+        "charge_10_80_min": 26,
+        "ac_kw": Decimal("11.0"),
+        "length_mm": 4280,
+        "width_mm": 1860,
+        "height_mm": 1295,
+        "seats": 2,
+        "drivetrain": "Rear-motor RWD",
+        "motor_count": 1,
+        "body_style": "coupe",
+        "warranty_years": 4,
+        "service_interval": "Every 20,000 km or 12 months",
+        "country_of_build": "United Kingdom",
+        "homologation": "UK / EU",
+        "slots_remaining": 60,
+        "lead_time_weeks": 10,
+    },
+    "atlas": {
+        "power_kw": 620,
+        "torque_nm": 1100,
+        "weight_kg": 2240,
+        "battery_kwh": Decimal("130.0"),
+        "charge_10_80_min": 28,
+        "ac_kw": Decimal("22.0"),
+        "length_mm": 4985,
+        "width_mm": 2040,
+        "height_mm": 1720,
+        "seats": 5,
+        "drivetrain": "Quad-motor AWD",
+        "motor_count": 4,
+        "body_style": "suv",
+        "warranty_years": 5,
+        "service_interval": "Every 20,000 km or 12 months",
+        "country_of_build": "United Kingdom",
+        "homologation": "UK / EU",
+        "slots_remaining": 24,
+        "lead_time_weeks": 16,
+    },
+}
+
+OPTIONS = [
+    ("paint", "Obsidian", Decimal("0.00"), True, 0),
+    ("paint", "Chalk", Decimal("4800.00"), False, 1),
+    ("paint", "Ember", Decimal("12400.00"), False, 2),
+    ("interior", "Black Alcantara", Decimal("0.00"), True, 0),
+    ("interior", "Natural leather", Decimal("8600.00"), False, 1),
+    ("wheels", "21-inch forged", Decimal("0.00"), True, 0),
+    ("wheels", "Track aero", Decimal("6200.00"), False, 1),
+]
+
+
 class Command(BaseCommand):
     help = "Creates the FoNix catalog and attaches imagery from the asset package."
 
@@ -259,6 +399,9 @@ class Command(BaseCommand):
         # are stripped before building the CarModel.
         data = {k: v for k, v in entry.items() if k not in ("art", "photos")}
         slug = data.pop("slug")
+        data.update(SPECS.get(slug, {}))
+        data.setdefault("allocation_open", True)
+        data.setdefault("max_order_quantity", 1)
 
         # update_or_create makes the command idempotent: running it twice
         # refreshes the copy and pricing instead of raising a unique-constraint
@@ -280,7 +423,24 @@ class Command(BaseCommand):
             self._attach_placeholder_art(car, entry.get("art", {}))
 
         verb = "Created" if created else "Updated"
+        self._seed_options(car)
         self.stdout.write(f"  {verb} {car.name} ({car.images.count()} gallery images)")
+
+    def _seed_options(self, car: CarModel):
+        car.options.all().delete()
+        CarOption.objects.bulk_create(
+            [
+                CarOption(
+                    car=car,
+                    category=category,
+                    name=name,
+                    price_delta=delta,
+                    is_default=is_default,
+                    sort_order=sort_order,
+                )
+                for category, name, delta, is_default, sort_order in OPTIONS
+            ]
+        )
 
     def _attach_photo_set(self, car: CarModel, slug: str, photos: dict):
         """

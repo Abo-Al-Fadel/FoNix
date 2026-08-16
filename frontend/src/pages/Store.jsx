@@ -27,21 +27,29 @@ const SORTS = [
   { id: "range", label: "Longest range" },
 ];
 
+const BODY_LABELS = {
+  coupe: "Coupé",
+  gt: "GT",
+  track: "Track",
+  saloon: "Saloon",
+  suv: "SUV",
+};
+
 const ORDERING_STEPS = [
   {
     number: "01",
-    title: "Choose your car",
-    body: "Every model is configurable to order. What you see here is the base specification and its price before options.",
+    title: "Configure one car",
+    body: "Pick paint, interior and wheels. Quantity is one: an allocation is a build slot, not a crate of stock.",
   },
   {
     number: "02",
-    title: "Place a reservation",
-    body: "Checkout records your order against your account. No payment is taken and no card details are ever collected.",
+    title: "Hold the slot",
+    body: "Checkout records a pending allocation and takes that slot off the range. No payment is taken.",
   },
   {
     number: "03",
-    title: "Build slot confirmed",
-    body: "A member of the team would normally contact you to specify paint, trim and delivery. This is where a real store would take over.",
+    title: "Confirm or cancel",
+    body: "You can cancel while it is pending; the slot returns. After FoNix confirms, only the hangar can unwind it.",
   },
 ];
 
@@ -49,12 +57,21 @@ export default function Store() {
   const fetcher = useCallback(() => fetchCars({ publicOnly: true }), []);
   const { data: cars, error, isLoading, retry } = useApiResource(fetcher);
   const [sort, setSort] = useState("featured");
+  const [body, setBody] = useState("all");
 
   // useMemo so the array is only re-sorted when the data or the sort changes,
   // not on every unrelated render.
+  const bodyStyles = useMemo(() => {
+    if (!cars) return [];
+    const unique = [...new Set(cars.map((car) => car.body_style).filter(Boolean))];
+    return unique.sort();
+  }, [cars]);
+
   const sortedCars = useMemo(() => {
     if (!cars) return null;
-    const copy = [...cars]; // never sort the array from state in place
+    const copy = [...cars].filter(
+      (car) => body === "all" || car.body_style === body,
+    );
 
     switch (sort) {
       case "price-asc":
@@ -70,7 +87,7 @@ export default function Store() {
       default:
         return copy; // the API's own ordering: hero first, then newest
     }
-  }, [cars, sort]);
+  }, [cars, sort, body]);
 
   const priceFloor = useMemo(() => {
     if (!cars?.length) return null;
@@ -81,8 +98,8 @@ export default function Store() {
     <div className="pb-24 md:pb-32">
       <PageHeader
         eyebrow="The range"
-        title="Six cars. One argument."
-        lede="Every FoNix starts from the same premise: that the fastest way through a corner and the most restrained way to draw a car are the same problem. Here is where that has taken us so far."
+        title="Six allocations."
+        lede="Each model is a build slot, not a stock car. Configure paint, interior and wheels, then hold the slot. No payment is taken on this demonstration."
       />
 
       <div className="fx-container">
@@ -119,7 +136,39 @@ export default function Store() {
 
         {/* --- Sort controls --- */}
         {cars?.length ? (
-          <Reveal className="mb-10">
+          <Reveal className="mb-10 space-y-4">
+            {bodyStyles.length > 0 ? (
+              <div
+                role="group"
+                aria-label="Filter by body style"
+                className="flex flex-wrap items-center gap-2"
+              >
+                <span className="mr-2 font-body text-[10px] uppercase tracking-[0.18em] text-faint">
+                  Body
+                </span>
+                {[{ id: "all", label: "All" }, ...bodyStyles.map((id) => ({
+                  id,
+                  label: BODY_LABELS[id] ?? id,
+                }))].map((option) => {
+                  const active = body === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setBody(option.id)}
+                      aria-pressed={active}
+                      className={`min-h-11 rounded-full border px-5 font-body text-xs uppercase tracking-[0.12em] transition-colors duration-300 ${
+                        active
+                          ? "border-ember/50 bg-ember/15 text-ember"
+                          : "border-hairline text-muted hover:border-white/25 hover:text-white"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
             <div
               role="group"
               aria-label="Sort the range"
@@ -163,6 +212,12 @@ export default function Store() {
           </EmptyState>
         ) : null}
 
+        {sortedCars && sortedCars.length === 0 && cars?.length > 0 ? (
+          <EmptyState title="Nothing in that body style">
+            Try another filter, or clear it to see the whole range.
+          </EmptyState>
+        ) : null}
+
         {sortedCars && sortedCars.length > 0 ? (
           <>
             {/*
@@ -171,7 +226,7 @@ export default function Store() {
               the change is easy to miss.
             */}
             <RevealGroup
-              key={sort}
+              key={`${sort}-${body}`}
               className="grid list-none grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-7"
             >
               {sortedCars.map((car) => (
@@ -188,7 +243,7 @@ export default function Store() {
           <Reveal>
             <p className="fx-eyebrow">Ordering</p>
             <h2 className="mt-4 font-heading text-2xl font-bold text-white md:text-3xl">
-              How this works
+              How an allocation works
             </h2>
           </Reveal>
 

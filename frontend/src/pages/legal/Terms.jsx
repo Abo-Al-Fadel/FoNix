@@ -16,6 +16,17 @@ export default function Terms() {
         </p>
       </LegalSection>
 
+      <LegalSection title="Allocations">
+        <p>
+          Checkout records a pending build slot. Quantity is one car per model
+          unless the hangar raises that cap. You may cancel a pending allocation
+          from your account; the slot returns to the range. Once FoNix confirms
+          it, only the hangar can unwind it. A delivered allocation is terminal
+          and the slot stays consumed. No payment is taken and no contract is
+          formed.
+        </p>
+      </LegalSection>
+
       <LegalSection title="Accounts">
         <p>
           You may register so the control panel and order history can be

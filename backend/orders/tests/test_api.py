@@ -1,14 +1,23 @@
 from decimal import Decimal
 
+from django.core import mail
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from accounts.tests.factories import AdminUserFactory, UserFactory
-from cars.tests.factories import CarModelFactory
+from accounts.tests.factories import AdminUserFactory, StaffUserFactory, UserFactory
+from cars.tests.factories import CarModelFactory, CarOptionFactory
 from orders.models import Order
 
 from .factories import OrderFactory, OrderItemFactory
+
+COLLECT = {
+    "method": "collect",
+    "full_name": "Ada Lovelace",
+    "phone": "0117 000 0000",
+    "country": "United Kingdom",
+}
 
 
 class OrderCreateAPITests(APITestCase):
@@ -20,10 +29,12 @@ class OrderCreateAPITests(APITestCase):
         self.ignis = CarModelFactory(name="Ignis", base_price=Decimal("2400000.00"))
         self.aurea = CarModelFactory(name="Aurea", base_price=Decimal("890000.00"))
 
+    def place(self, items, delivery=None, **extra):
+        payload = {"items": items, "delivery": delivery or COLLECT, **extra}
+        return self.client.post(self.url, payload, format="json")
+
     def test_anonymous_users_cannot_place_an_order(self):
-        response = self.client.post(
-            self.url, {"items": [{"car": self.ignis.slug, "quantity": 1}]}
-        )
+        response = self.place([{"car": self.ignis.slug, "quantity": 1}])
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(Order.objects.count(), 0)
@@ -31,20 +42,19 @@ class OrderCreateAPITests(APITestCase):
     def test_an_authenticated_customer_can_place_an_order(self):
         self.client.force_authenticate(user=self.user)
 
-        response = self.client.post(
-            self.url,
-            {
-                "items": [
-                    {"car": self.ignis.slug, "quantity": 1},
-                    {"car": self.aurea.slug, "quantity": 2},
-                ]
-            },
+        response = self.place(
+            [
+                {"car": self.ignis.slug, "quantity": 1},
+                {"car": self.aurea.slug, "quantity": 1},
+            ]
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         order = Order.objects.get()
         self.assertEqual(order.user, self.user)
         self.assertEqual(order.items.count(), 2)
+        self.assertEqual(order.delivery.method, "collect")
+        self.assertTrue(order.events.exists())
 
     def test_the_response_is_the_full_order_not_the_cart_payload(self):
         """The confirmation screen needs an id and a total, not an echo of the
@@ -52,14 +62,13 @@ class OrderCreateAPITests(APITestCase):
         is for."""
         self.client.force_authenticate(user=self.user)
 
-        response = self.client.post(
-            self.url, {"items": [{"car": self.ignis.slug, "quantity": 1}]}
-        )
+        response = self.place([{"car": self.ignis.slug, "quantity": 1}])
 
         self.assertIn("id", response.data)
         self.assertEqual(response.data["total"], "2400000.00")
         self.assertEqual(response.data["status"], "pending")
         self.assertEqual(response.data["items"][0]["car_name"], "Ignis")
+        self.assertTrue(response.data["can_cancel"])
 
     def test_a_client_supplied_price_is_ignored(self):
         """
@@ -68,17 +77,14 @@ class OrderCreateAPITests(APITestCase):
         """
         self.client.force_authenticate(user=self.user)
 
-        response = self.client.post(
-            self.url,
-            {
-                "items": [
-                    {
-                        "car": self.ignis.slug,
-                        "quantity": 1,
-                        "price_at_purchase": "1.00",
-                    }
-                ]
-            },
+        response = self.place(
+            [
+                {
+                    "car": self.ignis.slug,
+                    "quantity": 1,
+                    "price_at_purchase": "1.00",
+                }
+            ]
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -87,13 +93,31 @@ class OrderCreateAPITests(APITestCase):
             Decimal("2400000.00"),
         )
 
+    def test_option_deltas_are_snapshotted_onto_the_line_price(self):
+        ember = CarOptionFactory(
+            car=self.ignis,
+            name="Ember",
+            price_delta=Decimal("12400.00"),
+            is_default=False,
+        )
+        self.client.force_authenticate(user=self.user)
+
+        response = self.place(
+            [{"car": self.ignis.slug, "quantity": 1, "option_ids": [ember.pk]}]
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        item = Order.objects.get().items.get()
+        self.assertEqual(item.price_at_purchase, Decimal("2412400.00"))
+        self.assertEqual(item.options[0]["name"], "Ember")
+
     def test_a_client_cannot_place_an_order_on_someone_elses_account(self):
         victim = UserFactory()
         self.client.force_authenticate(user=self.user)
 
-        response = self.client.post(
-            self.url,
-            {"user": victim.id, "items": [{"car": self.ignis.slug, "quantity": 1}]},
+        response = self.place(
+            [{"car": self.ignis.slug, "quantity": 1}],
+            user=victim.id,
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -102,7 +126,34 @@ class OrderCreateAPITests(APITestCase):
     def test_an_empty_cart_is_rejected(self):
         self.client.force_authenticate(user=self.user)
 
-        response = self.client.post(self.url, {"items": []})
+        response = self.place([])
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_missing_delivery_is_rejected(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            self.url,
+            {"items": [{"car": self.ignis.slug, "quantity": 1}]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_deliver_without_an_address_is_rejected(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.place(
+            [{"car": self.ignis.slug, "quantity": 1}],
+            delivery={
+                "method": "deliver",
+                "full_name": "Ada Lovelace",
+                "country": "United Kingdom",
+            },
+        )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(Order.objects.count(), 0)
@@ -110,9 +161,26 @@ class OrderCreateAPITests(APITestCase):
     def test_an_unknown_car_slug_is_rejected(self):
         self.client.force_authenticate(user=self.user)
 
-        response = self.client.post(
-            self.url, {"items": [{"car": "not-a-real-car", "quantity": 1}]}
-        )
+        response = self.place([{"car": "not-a-real-car", "quantity": 1}])
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_an_unpublished_car_is_not_orderable(self):
+        hidden = CarModelFactory(name="Ghost", is_published=False)
+        self.client.force_authenticate(user=self.user)
+
+        response = self.place([{"car": hidden.slug, "quantity": 1}])
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_a_closed_allocation_is_rejected(self):
+        self.ignis.allocation_open = False
+        self.ignis.save(update_fields=["allocation_open"])
+        self.client.force_authenticate(user=self.user)
+
+        response = self.place([{"car": self.ignis.slug, "quantity": 1}])
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(Order.objects.count(), 0)
@@ -120,14 +188,11 @@ class OrderCreateAPITests(APITestCase):
     def test_a_duplicated_car_gets_a_readable_400_not_a_database_error(self):
         self.client.force_authenticate(user=self.user)
 
-        response = self.client.post(
-            self.url,
-            {
-                "items": [
-                    {"car": self.ignis.slug, "quantity": 1},
-                    {"car": self.ignis.slug, "quantity": 1},
-                ]
-            },
+        response = self.place(
+            [
+                {"car": self.ignis.slug, "quantity": 1},
+                {"car": self.ignis.slug, "quantity": 1},
+            ]
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -136,20 +201,44 @@ class OrderCreateAPITests(APITestCase):
     def test_a_zero_quantity_is_rejected(self):
         self.client.force_authenticate(user=self.user)
 
-        response = self.client.post(
-            self.url, {"items": [{"car": self.ignis.slug, "quantity": 0}]}
-        )
+        response = self.place([{"car": self.ignis.slug, "quantity": 0}])
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_quantity_above_the_car_cap_is_rejected(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.place([{"car": self.ignis.slug, "quantity": 2}])
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Order.objects.count(), 0)
 
     def test_an_absurd_quantity_is_rejected_before_it_reaches_the_database(self):
         self.client.force_authenticate(user=self.user)
 
-        response = self.client.post(
-            self.url, {"items": [{"car": self.ignis.slug, "quantity": 999999999}]}
-        )
+        response = self.place([{"car": self.ignis.slug, "quantity": 999999999}])
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_oversubscribing_the_last_slot_is_rejected(self):
+        self.ignis.slots_remaining = 0
+        self.ignis.save(update_fields=["slots_remaining"])
+        self.client.force_authenticate(user=self.user)
+
+        response = self.place([{"car": self.ignis.slug, "quantity": 1}])
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Order.objects.count(), 0)
+
+    def test_placing_an_order_holds_a_build_slot(self):
+        self.ignis.slots_remaining = 4
+        self.ignis.save(update_fields=["slots_remaining"])
+        self.client.force_authenticate(user=self.user)
+
+        self.place([{"car": self.ignis.slug, "quantity": 1}])
+
+        self.ignis.refresh_from_db()
+        self.assertEqual(self.ignis.slots_remaining, 3)
 
     def test_a_failed_order_leaves_nothing_behind(self):
         """
@@ -159,17 +248,23 @@ class OrderCreateAPITests(APITestCase):
         """
         self.client.force_authenticate(user=self.user)
 
-        self.client.post(
-            self.url,
-            {
-                "items": [
-                    {"car": self.ignis.slug, "quantity": 1},
-                    {"car": "not-a-real-car", "quantity": 1},
-                ]
-            },
+        self.place(
+            [
+                {"car": self.ignis.slug, "quantity": 1},
+                {"car": "not-a-real-car", "quantity": 1},
+            ]
         )
 
         self.assertEqual(Order.objects.count(), 0)
+
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_placing_an_order_sends_the_buyer_an_email(self):
+        self.client.force_authenticate(user=self.user)
+
+        self.place([{"car": self.ignis.slug, "quantity": 1}])
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("allocation", mail.outbox[0].subject.lower())
 
 
 class OrderListAPITests(APITestCase):
@@ -203,14 +298,36 @@ class OrderListAPITests(APITestCase):
 
         self.assertEqual(len(response.data["results"]), 2)
 
+    def test_a_staff_member_sees_every_order(self):
+        OrderFactory()
+        OrderFactory()
+        self.client.force_authenticate(user=StaffUserFactory())
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(len(response.data["results"]), 2)
+        self.assertIn("customer", response.data["results"][0])
+
+    def test_mine_scopes_even_staff_to_their_own_orders(self):
+        mine = OrderFactory(user=self.user)
+        OrderFactory()
+        staff = StaffUserFactory()
+        OrderFactory(user=staff)
+        self.client.force_authenticate(user=staff)
+
+        response = self.client.get(self.url, {"mine": "1"})
+
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertNotEqual(response.data["results"][0]["id"], mine.id)
+
     def test_listing_orders_does_not_scale_its_query_count_with_the_order_count(self):
         """
         Order.total walks order.items, and each item renders its car's name --
         the textbook N+1. OrderQuerySet.with_items() collapses it to a fixed
         number of queries no matter how many orders come back.
 
-        Four queries: the session/user lookup for authentication, the paginator
-        COUNT, the orders page, and one prefetch for all items+cars.
+        Four queries with force_authenticate: the paginator COUNT, the orders
+        page (with user + delivery), one prefetch for items+cars, one for events.
         """
         for _ in range(5):
             order = OrderFactory(user=self.user)
@@ -218,7 +335,7 @@ class OrderListAPITests(APITestCase):
             OrderItemFactory(order=order)
         self.client.force_authenticate(user=self.user)
 
-        with self.assertNumQueries(3):
+        with self.assertNumQueries(4):
             self.client.get(self.url)
 
 
@@ -257,6 +374,13 @@ class OrderDetailAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_a_staff_member_can_read_any_order(self):
+        self.client.force_authenticate(user=StaffUserFactory())
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
 
 class OrderMutationTests(APITestCase):
     """
@@ -286,6 +410,65 @@ class OrderMutationTests(APITestCase):
         self.assertEqual(Order.objects.count(), 1)
 
 
+class OrderCustomerCancelTests(APITestCase):
+    """POST /api/orders/{id}/cancel/ -- buyer unwind, pending only."""
+
+    def setUp(self):
+        self.user = UserFactory()
+        self.car = CarModelFactory(slots_remaining=5)
+        self.client.force_authenticate(user=self.user)
+        self.create_url = reverse("orders:order-list")
+
+    def _place(self):
+        response = self.client.post(
+            self.create_url,
+            {
+                "items": [{"car": self.car.slug, "quantity": 1}],
+                "delivery": COLLECT,
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        return Order.objects.get(pk=response.data["id"])
+
+    def test_the_buyer_can_cancel_a_pending_order_and_the_slot_returns(self):
+        order = self._place()
+        self.car.refresh_from_db()
+        self.assertEqual(self.car.slots_remaining, 4)
+
+        url = reverse("orders:order-cancel", kwargs={"pk": order.pk})
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        order.refresh_from_db()
+        self.car.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.CANCELLED)
+        self.assertEqual(self.car.slots_remaining, 5)
+        self.assertFalse(response.data["can_cancel"])
+
+    def test_the_buyer_cannot_cancel_once_the_hangar_has_confirmed(self):
+        order = self._place()
+        order.transition_to(Order.Status.CONFIRMED, actor=AdminUserFactory())
+        url = reverse("orders:order-cancel", kwargs={"pk": order.pk})
+
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.CONFIRMED)
+
+    def test_staff_cannot_use_the_buyer_cancel_on_someone_elses_order(self):
+        order = self._place()
+        self.client.force_authenticate(user=StaffUserFactory())
+        url = reverse("orders:order-cancel", kwargs={"pk": order.pk})
+
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.PENDING)
+
+
 class OrderStatusTrackingTests(APITestCase):
     """PATCH /api/orders/{id}/status/ -- the admin fulfilment action."""
 
@@ -306,6 +489,15 @@ class OrderStatusTrackingTests(APITestCase):
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, Order.Status.PENDING)
 
+    def test_staff_cannot_advance_an_order(self):
+        self.client.force_authenticate(user=StaffUserFactory())
+
+        response = self.client.patch(self.url, {"status": Order.Status.CONFIRMED})
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.Status.PENDING)
+
     def test_an_admin_can_advance_an_order_one_stage(self):
         self.client.force_authenticate(user=AdminUserFactory())
 
@@ -314,6 +506,7 @@ class OrderStatusTrackingTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, Order.Status.CONFIRMED)
+        self.assertTrue(self.order.events.filter(to_status=Order.Status.CONFIRMED).exists())
 
     def test_an_illegal_transition_is_rejected(self):
         # Pending -> Delivered skips the whole fulfilment chain.
@@ -334,6 +527,19 @@ class OrderStatusTrackingTests(APITestCase):
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, Order.Status.CANCELLED)
 
+    def test_admin_cancel_returns_held_slots(self):
+        car = CarModelFactory(slots_remaining=3)
+        item = OrderItemFactory(order=self.order, car=car, quantity=1)
+        car.slots_remaining = 2
+        car.save(update_fields=["slots_remaining"])
+        self.client.force_authenticate(user=AdminUserFactory())
+
+        response = self.client.patch(self.url, {"status": Order.Status.CANCELLED})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        item.car.refresh_from_db()
+        self.assertEqual(item.car.slots_remaining, 3)
+
     def test_a_delivered_order_is_terminal(self):
         self.order.status = Order.Status.DELIVERED
         self.order.save(update_fields=["status"])
@@ -353,3 +559,4 @@ class OrderStatusTrackingTests(APITestCase):
 
         self.assertEqual(response.data["status"], Order.Status.IN_PRODUCTION)
         self.assertEqual(response.data["status_display"], "In production")
+        self.assertFalse(response.data["can_cancel"])

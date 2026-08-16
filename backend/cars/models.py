@@ -10,8 +10,8 @@ class CarModel(models.Model):
     One model in the FoNix range (a product, not an individual vehicle).
 
     Named CarModel rather than Car because "Car" would read as a single
-    physical car with a VIN. Nothing here tracks stock or individual units --
-    that is intentionally out of scope for v1.
+    physical car with a VIN. Allocations (`slots_remaining`) are the stock
+    analogue: a hypercar is a build slot, not a crate of SKUs.
     """
 
     name = models.CharField(max_length=100)
@@ -89,6 +89,44 @@ class CarModel(models.Model):
         help_text="Internal build cost in GBP. Never exposed publicly; drives profit figures.",
     )
 
+    power_kw = models.PositiveIntegerField(null=True, blank=True)
+    torque_nm = models.PositiveIntegerField(null=True, blank=True)
+    weight_kg = models.PositiveIntegerField(null=True, blank=True)
+    battery_kwh = models.DecimalField(
+        max_digits=5, decimal_places=1, null=True, blank=True
+    )
+    charge_10_80_min = models.PositiveIntegerField(
+        null=True, blank=True, help_text="DC 10–80% minutes."
+    )
+    ac_kw = models.DecimalField(
+        max_digits=4, decimal_places=1, null=True, blank=True
+    )
+    length_mm = models.PositiveIntegerField(null=True, blank=True)
+    width_mm = models.PositiveIntegerField(null=True, blank=True)
+    height_mm = models.PositiveIntegerField(null=True, blank=True)
+    seats = models.PositiveSmallIntegerField(default=2)
+    drivetrain = models.CharField(max_length=40, blank=True)
+    motor_count = models.PositiveSmallIntegerField(default=1)
+    body_style = models.CharField(max_length=40, blank=True)
+    warranty_years = models.PositiveSmallIntegerField(default=4)
+    service_interval = models.CharField(max_length=80, blank=True)
+    country_of_build = models.CharField(max_length=40, default="United Kingdom")
+    homologation = models.CharField(max_length=80, blank=True)
+
+    allocation_open = models.BooleanField(
+        default=True,
+        help_text="When false, the store shows a waitlist instead of Add to cart.",
+    )
+    slots_remaining = models.PositiveIntegerField(
+        default=12,
+        help_text="Build slots still available. Held when an order is placed, returned if it is cancelled before delivery.",
+    )
+    lead_time_weeks = models.PositiveSmallIntegerField(default=16)
+    max_order_quantity = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="An allocation is one car. Raising this is a deliberate choice.",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -144,3 +182,38 @@ class CarImage(models.Model):
     @property
     def resolved_alt_text(self) -> str:
         return self.alt_text or f"The FoNix {self.car.name}"
+
+
+class CarOption(models.Model):
+    """Paint, interior or wheels that change the price of one model."""
+
+    class Category(models.TextChoices):
+        PAINT = "paint", "Paint"
+        INTERIOR = "interior", "Interior"
+        WHEELS = "wheels", "Wheels"
+
+    car = models.ForeignKey(
+        CarModel, related_name="options", on_delete=models.CASCADE
+    )
+    category = models.CharField(max_length=20, choices=Category.choices)
+    name = models.CharField(max_length=80)
+    price_delta = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Added to base_price. Zero is the no-cost default finish.",
+    )
+    is_default = models.BooleanField(default=False)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ("category", "sort_order", "id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("car", "category", "name"),
+                name="caroption_unique_name_per_category",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.car.name} {self.category}: {self.name}"

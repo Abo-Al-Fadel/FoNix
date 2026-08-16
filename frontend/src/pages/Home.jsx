@@ -15,29 +15,11 @@ const NUMBERS = [
   { value: 6, decimals: 0, unit: "", label: "Cars in the range" },
 ];
 
-const PRINCIPLES = [
-  {
-    number: "01",
-    title: "Subtract, then subtract again",
-    body: "Every FoNix begins as a list of parts we are trying to delete. No gearbox, no driveshaft, no exhaust, no grille. The silhouette is simply what is left once none of those matter.",
-  },
-  {
-    number: "02",
-    title: "One line, uninterrupted",
-    body: "The light blade runs from the front splitter to the rear diffuser as a single unbroken element. Difficult to tool, expensive to align, and impossible to unsee.",
-  },
-  {
-    number: "03",
-    title: "Quiet is the point",
-    body: "We do not synthesise an engine note. A FoNix at full throttle makes the sound of air being moved out of the way, and nothing else.",
-  },
-];
-
 const TIMELINE = [
-  { year: "2019", event: "Four engineers lease half an aircraft hangar outside Bristol." },
-  { year: "2021", event: "The quad-motor torque platform runs for the first time, on a bench." },
-  { year: "2023", event: "Ignis prototype 001 completes its first full lap under its own power." },
-  { year: "2026", event: "Six models. The hangar is now the whole building." },
+  { year: "2019", event: "Four engineers lease half of Building 4 at Filton. The first torque rig is a bench, not a car." },
+  { year: "2021", event: "The quad-motor platform runs under its own power on that same bench. No chassis yet." },
+  { year: "2023", event: "Ignis prototype 001 completes a full lap of the airfield perimeter under its own power." },
+  { year: "2026", event: "Six models take allocations from the same hangar. There is still no second plant." },
 ];
 
 export default function Home() {
@@ -54,17 +36,6 @@ export default function Home() {
 
       {/* --- Numbers strip --- */}
       <section className="fx-band relative overflow-hidden py-16 md:py-24">
-        {/* Two glows placed behind the band give it a light source. Decorative,
-            so aria-hidden and pulled out of the flow entirely. */}
-        <div
-          aria-hidden="true"
-          className="fx-glow fx-glow-ember -left-40 top-0 h-72 w-[34rem]"
-        />
-        <div
-          aria-hidden="true"
-          className="fx-glow fx-glow-cold -right-40 bottom-0 h-64 w-[30rem]"
-        />
-
         <div className="fx-container">
           <RevealGroup className="grid grid-cols-2 gap-10 md:grid-cols-4 md:gap-6">
             {NUMBERS.map((item) => (
@@ -102,8 +73,7 @@ export default function Home() {
               className="mt-6 font-heading font-bold leading-[1.08] text-white"
               style={{ fontSize: "clamp(1.75rem, 1rem + 3.2vw, 3.5rem)" }}
             >
-              Six electric cars, built on the argument that restraint and
-              violence are the same discipline.
+              Six shapes from one hangar. None of them a variant of another.
             </h2>
           </Reveal>
 
@@ -131,34 +101,22 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- Principles --- */}
-      {/* fx-band lifts alternating sections one step out of the page black and
-          fades both edges, so the rhythm comes from tonal change rather than a
-          stack of 1px rules. */}
+      {/* --- Hangar --- */}
       <section className="fx-band fx-section relative overflow-hidden">
         <div className="fx-container">
-          <Reveal>
-            <p className="fx-eyebrow">How we build</p>
+          <Reveal className="max-w-3xl">
+            <p className="fx-eyebrow">The hangar</p>
+            <h2 className="mt-4 font-heading text-3xl font-bold text-white md:text-4xl">
+              Allocations, not a production line.
+            </h2>
+            <p className="mt-6 font-body text-base leading-relaxed text-muted">
+              FoNix still occupies the Filton hangar it leased in 2019. Each
+              car is a build slot: paint, interior and wheels are chosen at
+              order, the slot is held while the allocation is pending, and it
+              returns to the range if you cancel before the hangar confirms.
+              When a model’s slots are gone, the waitlist is the only way in.
+            </p>
           </Reveal>
-
-          <RevealGroup className="mt-10 grid gap-10 md:grid-cols-3 md:gap-8">
-            {PRINCIPLES.map((principle) => (
-              <RevealItem
-                key={principle.number}
-                className="group rounded-card border border-hairline bg-graphite/30 p-7 transition-colors duration-500 hover:border-white/20"
-              >
-                <p className="font-heading text-5xl font-bold text-white/10 transition-colors duration-500 group-hover:text-ember/25">
-                  {principle.number}
-                </p>
-                <h3 className="mt-4 font-heading text-lg font-bold text-white">
-                  {principle.title}
-                </h3>
-                <p className="mt-3 font-body text-sm leading-relaxed text-muted">
-                  {principle.body}
-                </p>
-              </RevealItem>
-            ))}
-          </RevealGroup>
         </div>
       </section>
 

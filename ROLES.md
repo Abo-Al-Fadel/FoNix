@@ -12,10 +12,10 @@ The panel itself is the React app at **`/dashboard`** (staff and above see a
 
 | Tier | Rank | What it can do |
 |---|---|---|
-| **Customer** | 0 | Browse the store, place orders, see its own orders. |
-| **Staff** | 1 | Customer, plus **manage the catalogue**: add, edit, hide/unhide, delete cars. |
-| **Admin** | 2 | Staff, plus **track orders** (advance fulfilment status) and **manage users** (view everyone, change roles up to Admin, deactivate accounts). |
-| **Owner** | 3 | Admin, plus **grant/revoke the Owner role** and manage other owners. The oversight tier. (Revenue & profit dashboard arrives in a later phase.) |
+| **Customer** | 0 | Browse the store, hold an allocation (one car), see and cancel **their own pending** orders. |
+| **Staff** | 1 | Customer, plus **manage the catalogue** (add, edit, hide, slots) and **read every order**. Cannot change order status. |
+| **Admin** | 2 | Staff, plus **advance or cancel orders** and **manage users** (view everyone, change roles up to Admin, deactivate accounts). |
+| **Owner** | 3 | Admin, plus **grant/revoke the Owner role** and manage other owners. |
 
 Rank is the whole model: every gate is "rank ≥ X". A **superuser** ranks as
 Owner regardless of its `role` column, so the person who owns the database is
@@ -25,9 +25,11 @@ never locked out of the panel they administer.
 
 | Capability | Customer | Staff | Admin | Owner |
 |---|:---:|:---:|:---:|:---:|
-| Browse store, place orders | ✓ | ✓ | ✓ | ✓ |
-| Add / edit / hide / delete cars | | ✓ | ✓ | ✓ |
-| See every order, advance its status | | | ✓ | ✓ |
+| Browse store, hold an allocation | ✓ | ✓ | ✓ | ✓ |
+| Cancel own pending allocation | ✓ | ✓ | ✓ | ✓ |
+| Add / edit / hide / delete cars, edit slots | | ✓ | ✓ | ✓ |
+| See every order | | ✓ | ✓ | ✓ |
+| Advance or cancel any order | | | ✓ | ✓ |
 | See all users | | | ✓ | ✓ |
 | Change a user's role (up to Admin) | | | ✓ | ✓ |
 | Deactivate an account | | | ✓ | ✓ |
@@ -53,6 +55,21 @@ refuse, but the UI is convenience, not the boundary.
    with orders cannot be deleted anyway. The panel toggles `is_active` instead,
    which is reversible and keeps the financial record intact.
 
+## Allocations
+
+A FoNix order is a **build slot**, not a warehouse SKU.
+
+- Checkout decrements `slots_remaining` and writes a pending order plus handover
+  details. Quantity defaults to one car.
+- `GET /api/orders/?mine=1` always returns the caller's own orders, so `/account`
+  never dumps the hangar's book onto a staff login.
+- `POST /api/orders/{id}/cancel/` is the buyer unwind: **pending only**, and the
+  slot returns to the range. After confirm, the customer writes to the hangar.
+- `PATCH /api/orders/{id}/status/` is admin/owner fulfilment. Cancel from here
+  also returns the slot, unless the order is already delivered (terminal; the
+  slot stays consumed).
+- Staff can **read** every order in the dashboard. They cannot change status.
+
 ## Where each rule lives in the code
 
 | Concern | File |
@@ -62,8 +79,8 @@ refuse, but the UI is convenience, not the boundary.
 | Role-ceiling + last-owner rules | `backend/accounts/serializers.py` (`UserAdminSerializer`) |
 | Users API | `backend/accounts/views.py` (`UserAdminViewSet`) → `/api/admin/users/` |
 | Car hide + cost, staff-write | `backend/cars/` (`is_published`, `cost`, `IsStaffOrReadOnly`) |
-| Order lifecycle + status action | `backend/orders/` (`Order.Status`, `OrderViewSet.set_status`) |
-| Frontend mirror | `frontend/src/lib/roles.js`, `components/routing/RequireRole.jsx`, `pages/dashboard/` |
+| Order lifecycle, slots, cancel, status | `backend/orders/` (`Order.Status`, `create_from_cart`, `transition_to`, `OrderViewSet`) |
+| Frontend mirror | `frontend/src/lib/roles.js`, `components/routing/RequireRole.jsx`, `pages/dashboard/`, `/account` (`?mine=1`) |
 
 ## Demo accounts
 

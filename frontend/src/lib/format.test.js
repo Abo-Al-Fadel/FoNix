@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDate, formatPrice, headlineSpecs } from "./format.js";
+import { formatDate, formatPrice, formatPriceDelta, headlineSpecs, specSheet } from "./format.js";
 
 describe("formatPrice", () => {
   it("formats a decimal string as GBP with no pence", () => {
@@ -49,5 +49,27 @@ describe("headlineSpecs", () => {
     });
     const accel = specs.find((s) => s.label === "0–100");
     expect(accel.value).toBe("2.1");
+  });
+});
+
+describe("formatPriceDelta", () => {
+  it("calls a zero delta Included", () => {
+    expect(formatPriceDelta("0.00")).toBe("Included");
+  });
+
+  it("prefixes a positive delta", () => {
+    expect(formatPriceDelta("12400.00")).toBe("+£12,400");
+  });
+});
+
+describe("specSheet", () => {
+  it("drops empty spec rows", () => {
+    const rows = specSheet({
+      power_kw: 1847,
+      torque_nm: null,
+      drivetrain: "",
+      seats: 2,
+    });
+    expect(rows.map((row) => row.label)).toEqual(["Power", "Seats"]);
   });
 });

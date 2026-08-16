@@ -60,7 +60,7 @@ class CarModelViewSet(viewsets.ModelViewSet):
         if not self._is_staff():
             queryset = queryset.filter(is_published=True)
         if self.action == "retrieve":
-            queryset = queryset.prefetch_related("images")
+            queryset = queryset.prefetch_related("images", "options")
         return queryset
 
     def get_serializer_class(self):

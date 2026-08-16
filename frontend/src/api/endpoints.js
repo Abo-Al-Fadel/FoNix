@@ -62,23 +62,38 @@ export async function confirmPasswordReset(payload) {
 
 // --- Orders ----------------------------------------------------------------
 
-export async function fetchOrders() {
-  const { data } = await api.get("/orders/");
+export async function fetchOrders({ mine = false } = {}) {
+  const { data } = await api.get("/orders/", {
+    params: mine ? { mine: "1" } : undefined,
+  });
   return data.results ?? data;
 }
 
 /**
- * @param {Array<{slug: string, quantity: number}>} items
+ * @param {{
+ *   items: Array<{slug: string, quantity: number, optionIds?: number[] }>,
+ *   delivery: object,
+ * }} payload
  *
  * Note what is *not* sent: no prices. The server reads those from its own
  * database, which is what stops a tampered request buying a hypercar for a
  * pound. Sending them would be harmless (the API ignores them) but misleading
  * to anyone reading this code.
  */
-export async function createOrder(items) {
+export async function createOrder({ items, delivery }) {
   const { data } = await api.post("/orders/", {
-    items: items.map((item) => ({ car: item.slug, quantity: item.quantity })),
+    items: items.map((item) => ({
+      car: item.slug,
+      quantity: item.quantity,
+      option_ids: item.optionIds ?? [],
+    })),
+    delivery,
   });
+  return data;
+}
+
+export async function cancelOrder(orderId) {
+  const { data } = await api.post(`/orders/${orderId}/cancel/`);
   return data;
 }
 

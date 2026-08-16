@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { extractErrorMessage } from "../api/client.js";
 import { sendContactMessage } from "../api/endpoints.js";
@@ -10,14 +11,16 @@ import { useAuth } from "../context/AuthContext.jsx";
 
 export default function Contact() {
   const { user } = useAuth();
+  const [params] = useSearchParams();
+  const subjectFromUrl = params.get("subject") ?? "";
 
   const [form, setForm] = useState({
-    // Pre-filled for a signed-in visitor. Small, but it is the difference
-    // between a form that knows who you are and one that does not.
     name: user?.first_name ?? "",
     email: user?.email ?? "",
-    subject: "",
-    message: "",
+    subject: subjectFromUrl,
+    message: subjectFromUrl.startsWith("Waitlist:")
+      ? `Please add me to the waitlist for ${subjectFromUrl.replace(/^Waitlist:\s*/, "")}.`
+      : "",
   });
   const [error, setError] = useState("");
   const [isSending, setIsSending] = useState(false);

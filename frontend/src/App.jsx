@@ -65,17 +65,17 @@ export default function App() {
             <Route path="account" element={<Account />} />
           </Route>
 
-          {/* Control panel. Staff and above may enter; the admin-only sections
-              (orders, users) are additionally gated inside the sidebar and,
-              really, by the API. */}
+          {/* Control panel. Staff and above may enter; users stay admin-only.
+              Orders are visible to staff (read-only); status changes are
+              gated in the page and by the API. */}
           <Route element={<RequireRole min="staff" />}>
             <Route path="dashboard" element={<DashboardLayout />}>
               <Route index element={<DashboardHome />} />
               <Route path="cars" element={<DashboardCars />} />
               <Route path="cars/new" element={<CarForm />} />
               <Route path="cars/:slug/edit" element={<CarForm />} />
+              <Route path="orders" element={<DashboardOrders />} />
               <Route element={<RequireRole min="admin" />}>
-                <Route path="orders" element={<DashboardOrders />} />
                 <Route path="users" element={<DashboardUsers />} />
               </Route>
             </Route>

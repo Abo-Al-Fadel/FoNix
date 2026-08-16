@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { fetchCar } from "../api/endpoints.js";
@@ -7,34 +7,90 @@ import { ErrorState, LoadingState } from "../components/ui/StateBlock.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import useApiResource from "../hooks/useApiResource.js";
 import usePageTitle from "../hooks/usePageTitle.js";
-import { formatPrice, headlineSpecs } from "../lib/format.js";
+import {
+  formatPrice,
+  formatPriceDelta,
+  headlineSpecs,
+  specSheet,
+} from "../lib/format.js";
 import { titleForPath } from "../lib/pageTitle.js";
+
+const OPTION_LABELS = {
+  paint: "Paint",
+  interior: "Interior",
+  wheels: "Wheels",
+};
 
 export default function ProductDetail() {
   const { slug } = useParams();
-  const { addItem, lines, maxQuantity } = useCart();
+  const { addItem, lines } = useCart();
 
-  // Keyed on slug so navigating between two cars refetches rather than
-  // reusing the first car's data.
   const fetcher = useCallback(() => fetchCar(slug, { publicOnly: true }), [slug]);
   const { data: car, error, isLoading, retry } = useApiResource(fetcher);
   usePageTitle(car?.name ? `${car.name} | FoNix` : titleForPath(`/store/${slug}`));
 
   const [activeImage, setActiveImage] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
+  const [selected, setSelected] = useState({});
 
-  // Reset the gallery when the car changes -- otherwise arriving at a car with
-  // one image while index 3 is selected renders nothing.
   useEffect(() => setActiveImage(0), [slug]);
 
-  // Clear the "added" confirmation after a moment. The cleanup matters: without
-  // it, navigating away mid-timeout would try to set state on an unmounted
-  // component.
+  useEffect(() => {
+    if (!car?.options) return;
+    const next = {};
+    for (const option of car.options) {
+      if (option.is_default) next[option.category] = option.id;
+    }
+    setSelected(next);
+  }, [car]);
+
   useEffect(() => {
     if (!justAdded) return undefined;
     const timer = window.setTimeout(() => setJustAdded(false), 2600);
     return () => window.clearTimeout(timer);
   }, [justAdded]);
+
+  useEffect(() => {
+    if (!car) return undefined;
+    const site = (import.meta.env.VITE_SITE_URL || "").replace(/\/$/, "");
+    const script = document.createElement("script");
+    script.type = "application/ld+json";
+    script.id = "fonix-product-jsonld";
+    document.getElementById("fonix-product-jsonld")?.remove();
+    const available = car.allocation_open && car.slots_remaining > 0;
+    script.text = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: `FoNix ${car.name}`,
+      description: car.tagline || car.description,
+      image: car.thumbnail,
+      brand: { "@type": "Brand", name: "FoNix" },
+      offers: {
+        "@type": "Offer",
+        priceCurrency: "GBP",
+        price: String(car.base_price),
+        availability: available
+          ? "https://schema.org/LimitedAvailability"
+          : "https://schema.org/OutOfStock",
+        url: site ? `${site}/store/${car.slug}` : undefined,
+      },
+    });
+    document.head.appendChild(script);
+    return () => script.remove();
+  }, [car]);
+
+  const extras = useMemo(() => {
+    if (!car?.options) return [];
+    return car.options.filter((option) => selected[option.category] === option.id);
+  }, [car, selected]);
+
+  const grouped = useMemo(() => {
+    const groups = {};
+    for (const option of car?.options ?? []) {
+      (groups[option.category] ??= []).push(option);
+    }
+    return groups;
+  }, [car]);
 
   if (isLoading) return <LoadingState label="Loading model" />;
 
@@ -54,18 +110,21 @@ export default function ProductDetail() {
   if (!car) return null;
 
   const specs = headlineSpecs(car);
-  // The gallery falls back to the thumbnail so a car with no gallery rows still
-  // renders a picture rather than an empty frame.
+  const sheet = specSheet(car);
   const gallery =
     car.images?.length > 0
       ? car.images
       : [{ id: "thumbnail", image: car.thumbnail, alt_text: car.thumbnail_alt }];
 
+  const configuredPrice =
+    Number(car.base_price) +
+    extras.reduce((sum, option) => sum + Number(option.price_delta), 0);
+  const waitlist = !car.allocation_open || car.slots_remaining === 0;
   const inCart = lines.find((line) => line.slug === car.slug);
-  const atMax = inCart ? inCart.quantity >= maxQuantity : false;
+  const waitlistHref = `/contact?subject=${encodeURIComponent(`Waitlist: ${car.name}`)}`;
 
   function handleAddToCart() {
-    addItem(car, 1);
+    addItem(car, 1, extras);
     setJustAdded(true);
   }
 
@@ -85,7 +144,6 @@ export default function ProductDetail() {
         </nav>
 
         <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
-          {/* ---------------- Gallery ---------------- */}
           <div>
             <div className="overflow-hidden rounded-card border border-hairline bg-graphite/60">
               <img
@@ -98,12 +156,6 @@ export default function ProductDetail() {
             </div>
 
             {gallery.length > 1 ? (
-              /*
-                Thumbnails are real <button>s in a labelled group, not clickable
-                divs -- so they are reachable by keyboard and announce their
-                selected state. aria-pressed is what conveys "this is the one
-                currently showing".
-              */
               <div
                 role="group"
                 aria-label="Gallery images"
@@ -124,9 +176,6 @@ export default function ProductDetail() {
                   >
                     <img
                       src={image.image}
-                      // Decorative here: the button's aria-label already names
-                      // it, and repeating the full description four times would
-                      // just be noise.
                       alt=""
                       loading="lazy"
                       className="aspect-16/9 w-full object-cover"
@@ -143,9 +192,29 @@ export default function ProductDetail() {
                 relabelled photograph of a different model.
               </p>
             ) : null}
+
+            {sheet.length > 0 ? (
+              <section className="mt-10">
+                <h2 className="font-heading text-lg font-bold text-white">
+                  Specification
+                </h2>
+                <dl className="mt-4 divide-y divide-hairline border-y border-hairline">
+                  {sheet.map((row) => (
+                    <div
+                      key={row.label}
+                      className="flex items-baseline justify-between gap-6 py-3"
+                    >
+                      <dt className="font-body text-xs uppercase tracking-[0.14em] text-faint">
+                        {row.label}
+                      </dt>
+                      <dd className="font-body text-sm text-white">{row.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            ) : null}
           </div>
 
-          {/* ---------------- Detail ---------------- */}
           <div className="lg:pt-4">
             {car.is_hero ? <p className="fx-eyebrow">Flagship</p> : null}
 
@@ -161,10 +230,13 @@ export default function ProductDetail() {
             ) : null}
 
             <p className="mt-8 font-heading text-3xl font-bold text-white">
-              {formatPrice(car.base_price)}
+              {formatPrice(configuredPrice)}
             </p>
             <p className="mt-1.5 font-body text-xs text-faint">
-              Indicative UK price before options and delivery.
+              UK price as configured. One allocation per order.
+              {car.slots_remaining != null
+                ? ` ${car.slots_remaining} slot${car.slots_remaining === 1 ? "" : "s"} remaining.`
+                : ""}
             </p>
 
             <dl className="mt-10 grid grid-cols-3 gap-4 border-y border-hairline py-7">
@@ -183,15 +255,62 @@ export default function ProductDetail() {
               ))}
             </dl>
 
+            {Object.keys(grouped).length > 0 ? (
+              <div className="mt-8 space-y-6">
+                {Object.entries(grouped).map(([category, options]) => (
+                  <fieldset key={category}>
+                    <legend className="font-body text-[10px] uppercase tracking-[0.16em] text-faint">
+                      {OPTION_LABELS[category] ?? category}
+                    </legend>
+                    <div className="mt-3 space-y-2">
+                      {options.map((option) => {
+                        const checked = selected[category] === option.id;
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex min-h-11 cursor-pointer items-center justify-between gap-4 rounded-input border px-4 py-3 font-body text-sm transition-colors ${
+                              checked
+                                ? "border-ember/50 bg-ember/10 text-white"
+                                : "border-hairline text-muted hover:border-white/25 hover:text-white"
+                            }`}
+                          >
+                            <span className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`option-${category}`}
+                                checked={checked}
+                                onChange={() =>
+                                  setSelected((current) => ({
+                                    ...current,
+                                    [category]: option.id,
+                                  }))
+                                }
+                                className="accent-ember"
+                              />
+                              {option.name}
+                            </span>
+                            <span className="text-xs text-faint">
+                              {formatPriceDelta(option.price_delta)}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+                ))}
+              </div>
+            ) : null}
+
             <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-              <Button
-                onClick={handleAddToCart}
-                disabled={atMax}
-                size="lg"
-                fullWidth
-              >
-                {atMax ? `Maximum ${maxQuantity} reached` : "Add to cart"}
-              </Button>
+              {waitlist ? (
+                <Button to={waitlistHref} size="lg" fullWidth>
+                  Join the waitlist
+                </Button>
+              ) : (
+                <Button onClick={handleAddToCart} size="lg" fullWidth>
+                  {inCart ? "Update configuration" : "Hold allocation"}
+                </Button>
+              )}
               {inCart ? (
                 <Button to="/cart" variant="ghost" size="lg" fullWidth>
                   View cart
@@ -199,25 +318,29 @@ export default function ProductDetail() {
               ) : null}
             </div>
 
-            {/*
-              role="status" announces the confirmation to a screen reader
-              without stealing focus. A purely visual toast would leave a
-              non-sighted user with no feedback that the click worked.
-            */}
             <p
               role="status"
               className={`mt-4 font-body text-xs transition-opacity duration-300 ${
                 justAdded ? "text-ember opacity-100" : "opacity-0"
               }`}
             >
-              {justAdded ? `${car.name} added to your cart.` : ""}
+              {justAdded ? `${car.name} is in your cart.` : ""}
             </p>
 
-            {/*
-              whitespace-pre-line renders the double newlines the seed copy
-              uses as real paragraph breaks, without needing the API to send
-              HTML (which would then need sanitising).
-            */}
+            {waitlist ? (
+              <p className="mt-4 font-body text-xs leading-relaxed text-faint">
+                {car.allocation_open
+                  ? "This allocation is full. Join the waitlist and the hangar will write when a slot returns."
+                  : "This model is not taking allocations. Join the waitlist and we will tell you when it opens."}
+              </p>
+            ) : (
+              <p className="mt-4 font-body text-xs leading-relaxed text-faint">
+                Holding an allocation records a pending slot against your
+                account. You can cancel it from your orders while it is still
+                pending. No payment is taken.
+              </p>
+            )}
+
             <div className="mt-10 whitespace-pre-line font-body text-sm leading-relaxed text-muted">
               {car.description}
             </div>

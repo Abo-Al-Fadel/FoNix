@@ -8,8 +8,7 @@ import { useCart } from "../context/CartContext.jsx";
 import { formatPrice } from "../lib/format.js";
 
 export default function Cart() {
-  const { lines, subtotal, isEmpty, setQuantity, removeItem, maxQuantity } =
-    useCart();
+  const { lines, subtotal, isEmpty, setQuantity, removeItem } = useCart();
   const { isAuthenticated } = useAuth();
 
   if (isEmpty) {
@@ -62,55 +61,61 @@ export default function Cart() {
                     {line.name}
                   </Link>
                   <p className="mt-1 font-body text-sm text-muted">
-                    {formatPrice(line.price)} each
+                    {formatPrice(line.price)}
                   </p>
+                  {line.optionLabels?.length ? (
+                    <p className="mt-1 font-body text-xs text-faint">
+                      {line.optionLabels.join(" · ")}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="flex items-center justify-between gap-4 sm:flex-col sm:items-end sm:gap-3">
-                  {/*
-                    A real <label> tied to the input, visually hidden. A bare
-                    number box with no label is announced as just "edit text"
-                    -- useless if you cannot see which row it belongs to.
-                  */}
-                  <div className="flex items-center gap-3">
-                    <label
-                      htmlFor={`quantity-${line.slug}`}
-                      className="sr-only"
-                    >
-                      Quantity of {line.name}
-                    </label>
-                    <div className="flex items-center rounded-full border border-hairline">
-                      <button
-                        type="button"
-                        onClick={() => setQuantity(line.slug, line.quantity - 1)}
-                        disabled={line.quantity <= 1}
-                        aria-label={`Decrease quantity of ${line.name}`}
-                        className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-muted transition-colors hover:text-white disabled:opacity-30"
+                  {(line.maxQuantity ?? 1) > 1 ? (
+                    <div className="flex items-center gap-3">
+                      <label
+                        htmlFor={`quantity-${line.slug}`}
+                        className="sr-only"
                       >
-                        −
-                      </button>
-                      <input
-                        id={`quantity-${line.slug}`}
-                        type="number"
-                        min={1}
-                        max={maxQuantity}
-                        value={line.quantity}
-                        onChange={(event) =>
-                          setQuantity(line.slug, Number(event.target.value))
-                        }
-                        className="h-11 w-12 border-0 bg-transparent text-center font-heading text-base font-semibold text-white [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setQuantity(line.slug, line.quantity + 1)}
-                        disabled={line.quantity >= maxQuantity}
-                        aria-label={`Increase quantity of ${line.name}`}
-                        className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-muted transition-colors hover:text-white disabled:opacity-30"
-                      >
-                        +
-                      </button>
+                        Quantity of {line.name}
+                      </label>
+                      <div className="flex items-center rounded-full border border-hairline">
+                        <button
+                          type="button"
+                          onClick={() => setQuantity(line.slug, line.quantity - 1)}
+                          disabled={line.quantity <= 1}
+                          aria-label={`Decrease quantity of ${line.name}`}
+                          className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-muted transition-colors hover:text-white disabled:opacity-30"
+                        >
+                          −
+                        </button>
+                        <input
+                          id={`quantity-${line.slug}`}
+                          type="number"
+                          min={1}
+                          max={line.maxQuantity}
+                          value={line.quantity}
+                          onChange={(event) =>
+                            setQuantity(line.slug, Number(event.target.value))
+                          }
+                          className="h-11 w-12 border-0 bg-transparent text-center font-heading text-base font-semibold text-white [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setQuantity(line.slug, line.quantity + 1)}
+                          disabled={line.quantity >= line.maxQuantity}
+                          aria-label={`Increase quantity of ${line.name}`}
+                          className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-muted transition-colors hover:text-white disabled:opacity-30"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <p className="font-body text-xs uppercase tracking-[0.14em] text-faint">
+                      1 allocation
+                    </p>
+                  )}
 
                   <div className="text-right">
                     <p className="font-heading text-lg font-bold text-white">
@@ -164,8 +169,9 @@ export default function Cart() {
               </div>
 
               <p className="mt-4 font-body text-xs leading-relaxed text-faint">
-                No payment is taken. Placing an order records it against your
-                account so you can see the full flow end to end.
+                No payment is taken. Confirming an allocation holds a build slot
+                while it is pending. Cancel from your account until FoNix
+                confirms it.
               </p>
             </div>
           </aside>

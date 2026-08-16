@@ -1,12 +1,36 @@
 from rest_framework import serializers
 
-from .models import CarImage, CarModel
+from .models import CarImage, CarModel, CarOption
+
+SPEC_FIELDS = (
+    "power_kw",
+    "torque_nm",
+    "weight_kg",
+    "battery_kwh",
+    "charge_10_80_min",
+    "ac_kw",
+    "length_mm",
+    "width_mm",
+    "height_mm",
+    "seats",
+    "drivetrain",
+    "motor_count",
+    "body_style",
+    "warranty_years",
+    "service_interval",
+    "country_of_build",
+    "homologation",
+)
+
+ALLOCATION_FIELDS = (
+    "allocation_open",
+    "slots_remaining",
+    "lead_time_weeks",
+    "max_order_quantity",
+)
 
 
 class CarImageSerializer(serializers.ModelSerializer):
-    # A method field so the API always sends a usable alt string, resolving the
-    # model's fallback server-side. The frontend should never have to decide
-    # what to do with an empty alt attribute.
     alt_text = serializers.CharField(source="resolved_alt_text", read_only=True)
 
     class Meta:
@@ -14,16 +38,13 @@ class CarImageSerializer(serializers.ModelSerializer):
         fields = ("id", "image", "alt_text", "display_order")
 
 
+class CarOptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CarOption
+        fields = ("id", "category", "name", "price_delta", "is_default", "sort_order")
+
+
 class CarListSerializer(serializers.ModelSerializer):
-    """
-    Catalog-card representation. Deliberately smaller than the detail
-    serializer: the store grid needs a price and a thumbnail, not a 400-word
-    description or a full gallery for every card.
-
-    Two serializers instead of one is not duplication -- it is the list
-    endpoint refusing to pay for data nobody renders.
-    """
-
     thumbnail_alt = serializers.CharField(source="alt_text", read_only=True)
 
     class Meta:
@@ -41,25 +62,14 @@ class CarListSerializer(serializers.ModelSerializer):
             "thumbnail_alt",
             "is_hero",
             "has_real_imagery",
+            "body_style",
+            *ALLOCATION_FIELDS,
         )
 
 
 class CarAdminSerializer(serializers.ModelSerializer):
-    """
-    The control-panel representation, used only for staff and above.
-
-    Two things separate it from the public serializers:
-      - It exposes the operational fields a manager needs and a shopper must
-        never see: `cost` (drives margin) and `is_published` (the hide switch).
-      - `thumbnail_alt` is the real, writable model field here, not the
-        read-only `alt_text` fallback the public serializers surface -- staff
-        are the people who actually write the alt text.
-
-    It reads and writes every catalogue field, so the same serializer backs the
-    dashboard's list, create and edit screens.
-    """
-
     images = CarImageSerializer(many=True, read_only=True)
+    options = CarOptionSerializer(many=True, read_only=True)
 
     class Meta:
         model = CarModel
@@ -74,38 +84,26 @@ class CarAdminSerializer(serializers.ModelSerializer):
             "range_km",
             "top_speed_kmh",
             "acceleration_0_100",
+            *SPEC_FIELDS,
+            *ALLOCATION_FIELDS,
             "thumbnail",
             "thumbnail_alt",
             "is_hero",
             "has_real_imagery",
             "is_published",
             "images",
+            "options",
             "created_at",
         )
         read_only_fields = ("id", "created_at")
         extra_kwargs = {
-            # Optional on write so a car can be POSTed and the model's save()
-            # derives the slug from the name.
             "slug": {"required": False},
-            # thumbnail stays required for a create (a car with no image is a
-            # hole in the store grid); editing an existing car uses PATCH, where
-            # partial=True already makes every field optional, so no re-upload is
-            # forced. That is why there is deliberately no required=False here.
         }
 
 
 class CarDetailSerializer(serializers.ModelSerializer):
-    """
-    Full product page payload, including the nested gallery.
-
-    `images` is read-only nested output. Writable nested serializers require a
-    custom create()/update() to handle the child rows, and gallery images are
-    managed in the Django admin here -- so making it read-only is an honest
-    description of what the endpoint actually supports rather than a broken
-    half-implementation.
-    """
-
     images = CarImageSerializer(many=True, read_only=True)
+    options = CarOptionSerializer(many=True, read_only=True)
     thumbnail_alt = serializers.CharField(source="alt_text", read_only=True)
 
     class Meta:
@@ -120,16 +118,17 @@ class CarDetailSerializer(serializers.ModelSerializer):
             "range_km",
             "top_speed_kmh",
             "acceleration_0_100",
+            *SPEC_FIELDS,
+            *ALLOCATION_FIELDS,
             "thumbnail",
             "thumbnail_alt",
             "is_hero",
             "has_real_imagery",
             "images",
+            "options",
             "created_at",
         )
         read_only_fields = ("id", "created_at")
         extra_kwargs = {
-            # Optional on write so an admin can POST a car and let the model's
-            # save() derive the slug from the name.
             "slug": {"required": False},
         }

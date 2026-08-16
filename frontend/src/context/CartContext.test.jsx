@@ -16,6 +16,7 @@ const IGNIS = {
   base_price: "2400000.00",
   thumbnail: "/ignis.webp",
   thumbnail_alt: "The Ignis",
+  max_order_quantity: 1,
 };
 const AUREA = {
   slug: "aurea",
@@ -23,9 +24,9 @@ const AUREA = {
   base_price: "890000.00",
   thumbnail: "/aurea.webp",
   thumbnail_alt: "The Aurea",
+  max_order_quantity: 1,
 };
 
-// Every test gets the hook wrapped in a real provider.
 function renderCart() {
   return renderHook(() => useCart(), { wrapper: CartProvider });
 }
@@ -54,12 +55,30 @@ describe("adding items", () => {
   it("merges a repeat add into the existing line instead of duplicating it", () => {
     const { result } = renderCart();
     act(() => result.current.addItem(IGNIS, 1));
-    act(() => result.current.addItem(IGNIS, 2));
+    act(() => result.current.addItem(IGNIS, 1));
 
-    // One line, quantity 3 -- not two lines. This is the dedup rule the server
-    // also enforces with its unique (order, car) constraint.
+    // One line, still quantity 1 -- an allocation is one car. The server
+    // unique-constrains (order, car) the same way.
     expect(result.current.lines).toHaveLength(1);
-    expect(result.current.lines[0].quantity).toBe(3);
+    expect(result.current.lines[0].quantity).toBe(1);
+  });
+
+  it("replaces the configuration when the same car is added again", () => {
+    const { result } = renderCart();
+    act(() =>
+      result.current.addItem(IGNIS, 1, [
+        { id: 1, name: "Obsidian", price_delta: "0.00" },
+      ]),
+    );
+    act(() =>
+      result.current.addItem(IGNIS, 1, [
+        { id: 2, name: "Ember", price_delta: "12400.00" },
+      ]),
+    );
+
+    expect(result.current.lines).toHaveLength(1);
+    expect(result.current.lines[0].optionLabels).toEqual(["Ember"]);
+    expect(result.current.lines[0].price).toBe(2412400);
   });
 
   it("keeps different cars as separate lines", () => {
@@ -75,20 +94,18 @@ describe("adding items", () => {
     const { result } = renderCart();
     act(() => result.current.addItem({ ...IGNIS, description: "secret" }, 1));
 
-    // A stale description sitting in localStorage for a week would be worse than
-    // useless, so the reducer copies only slug/name/price/thumbnail/quantity.
     expect(result.current.lines[0]).not.toHaveProperty("description");
   });
 });
 
 describe("quantity", () => {
-  it("clamps to the maximum of 10", () => {
+  it("clamps to the car's max_order_quantity, defaulting to 1", () => {
     const { result } = renderCart();
     act(() => result.current.addItem(IGNIS, 1));
     act(() => result.current.setQuantity("ignis", 999));
 
     expect(result.current.lines[0].quantity).toBe(result.current.maxQuantity);
-    expect(result.current.maxQuantity).toBe(10);
+    expect(result.current.maxQuantity).toBe(1);
   });
 
   it("clamps to a minimum of 1", () => {
@@ -101,10 +118,10 @@ describe("quantity", () => {
 
   it("caps the quantity even when adding pushes past the max", () => {
     const { result } = renderCart();
-    act(() => result.current.addItem(IGNIS, 8));
-    act(() => result.current.addItem(IGNIS, 8));
+    act(() => result.current.addItem(IGNIS, 1));
+    act(() => result.current.addItem(IGNIS, 1));
 
-    expect(result.current.lines[0].quantity).toBe(10);
+    expect(result.current.lines[0].quantity).toBe(1);
   });
 });
 
@@ -132,38 +149,36 @@ describe("removal and clearing", () => {
 describe("subtotal", () => {
   it("sums price times quantity across lines", () => {
     const { result } = renderCart();
-    act(() => result.current.addItem(IGNIS, 2)); // 4,800,000
-    act(() => result.current.addItem(AUREA, 1)); //   890,000
+    act(() => result.current.addItem(IGNIS, 1));
+    act(() => result.current.addItem(AUREA, 1));
 
-    expect(result.current.subtotal).toBe(5690000);
+    expect(result.current.subtotal).toBe(3290000);
   });
 });
 
 describe("persistence", () => {
   it("writes the cart to localStorage on change", () => {
     const { result } = renderCart();
-    act(() => result.current.addItem(IGNIS, 2));
+    act(() => result.current.addItem(IGNIS, 1));
 
-    const stored = JSON.parse(window.localStorage.getItem("fonix.cart.v1"));
+    const stored = JSON.parse(window.localStorage.getItem("fonix.cart.v2"));
     expect(stored).toHaveLength(1);
-    expect(stored[0].quantity).toBe(2);
+    expect(stored[0].quantity).toBe(1);
   });
 
   it("restores a persisted cart on mount", () => {
     window.localStorage.setItem(
-      "fonix.cart.v1",
-      JSON.stringify([{ ...IGNIS, price: IGNIS.base_price, quantity: 3 }]),
+      "fonix.cart.v2",
+      JSON.stringify([{ ...IGNIS, price: IGNIS.base_price, quantity: 1 }]),
     );
 
     const { result } = renderCart();
     expect(result.current.lines).toHaveLength(1);
-    expect(result.current.itemCount).toBe(3);
+    expect(result.current.itemCount).toBe(1);
   });
 
   it("ignores malformed localStorage rather than crashing", () => {
-    // A user can hand-edit localStorage, and an older app version may have
-    // written a different shape. The cart must survive both.
-    window.localStorage.setItem("fonix.cart.v1", "{not valid json");
+    window.localStorage.setItem("fonix.cart.v2", "{not valid json");
 
     const { result } = renderCart();
     expect(result.current.isEmpty).toBe(true);
@@ -171,11 +186,11 @@ describe("persistence", () => {
 
   it("filters out malformed line entries", () => {
     window.localStorage.setItem(
-      "fonix.cart.v1",
+      "fonix.cart.v2",
       JSON.stringify([
         { slug: "ignis", price: "1", quantity: 1 },
-        { garbage: true }, // no slug -> dropped
-        { slug: "x", quantity: "not a number" }, // bad quantity -> dropped
+        { garbage: true },
+        { slug: "x", quantity: "not a number" },
       ]),
     );
 

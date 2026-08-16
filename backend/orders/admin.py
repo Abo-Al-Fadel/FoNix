@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Order, OrderItem
+from .models import DeliveryDetail, Order, OrderEvent, OrderItem
 
 
 class OrderItemInline(admin.TabularInline):
@@ -9,7 +9,7 @@ class OrderItemInline(admin.TabularInline):
     # An order's lines are a historical record. Making them read-only in the
     # admin means a well-meaning click cannot rewrite what a customer was
     # actually charged.
-    readonly_fields = ("car", "quantity", "price_at_purchase", "subtotal_display")
+    readonly_fields = ("car", "quantity", "price_at_purchase", "options", "subtotal_display")
     can_delete = False
 
     @admin.display(description="Subtotal")
@@ -20,15 +20,31 @@ class OrderItemInline(admin.TabularInline):
         return False
 
 
+class DeliveryInline(admin.StackedInline):
+    model = DeliveryDetail
+    extra = 0
+    can_delete = False
+
+
+class OrderEventInline(admin.TabularInline):
+    model = OrderEvent
+    extra = 0
+    can_delete = False
+    readonly_fields = ("from_status", "to_status", "at", "actor", "note")
+
+    def has_add_permission(self, request, obj=None) -> bool:
+        return False
+
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    inlines = [OrderItemInline]
+    inlines = [DeliveryInline, OrderItemInline, OrderEventInline]
 
     list_display = ("id", "user", "status", "total_display", "created_at")
     list_filter = ("status", "created_at")
     search_fields = ("id", "user__username", "user__email")
     date_hierarchy = "created_at"
-    readonly_fields = ("user", "created_at", "total_display")
+    readonly_fields = ("user", "created_at", "updated_at", "total_display")
 
     @admin.display(description="Order total")
     def total_display(self, obj: Order) -> str:

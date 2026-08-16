@@ -2,7 +2,7 @@ from decimal import Decimal
 
 import factory
 
-from cars.models import CarImage, CarModel
+from cars.models import CarImage, CarModel, CarOption
 
 
 class CarModelFactory(factory.django.DjangoModelFactory):
@@ -37,3 +37,15 @@ class CarImageFactory(factory.django.DjangoModelFactory):
     car = factory.SubFactory(CarModelFactory)
     image = factory.django.ImageField(width=32, height=18, color="black")
     alt_text = "A test car photographed in a dark studio."
+
+
+class CarOptionFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = CarOption
+
+    car = factory.SubFactory(CarModelFactory)
+    category = CarOption.Category.PAINT
+    name = factory.Sequence(lambda n: f"Finish {n}")
+    price_delta = Decimal("0.00")
+    is_default = False
+    sort_order = 0

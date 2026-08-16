@@ -45,3 +45,64 @@ export function headlineSpecs(car) {
     { label: "0–100", value: `${Number(car.acceleration_0_100)}`, unit: "s" },
   ];
 }
+
+/** @param {string|number} value */
+export function formatPriceDelta(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number === 0) return "Included";
+  const formatted = formatPrice(Math.abs(number));
+  return number > 0 ? `+${formatted}` : `−${formatted}`;
+}
+
+const dateTimeFormatter = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+export function formatDateTime(isoString) {
+  const date = new Date(isoString);
+  return Number.isNaN(date.getTime()) ? "-" : dateTimeFormatter.format(date);
+}
+
+/**
+ * Full spec sheet for the product page. Empty / null values are dropped so a
+ * car still being specified does not print a table of dashes.
+ */
+export function specSheet(car) {
+  const rows = [
+    { label: "Power", value: car.power_kw != null ? `${car.power_kw} kW` : null },
+    { label: "Torque", value: car.torque_nm != null ? `${car.torque_nm} Nm` : null },
+    { label: "Kerb weight", value: car.weight_kg != null ? `${car.weight_kg} kg` : null },
+    {
+      label: "Battery",
+      value: car.battery_kwh != null ? `${Number(car.battery_kwh)} kWh` : null,
+    },
+    {
+      label: "DC 10–80%",
+      value: car.charge_10_80_min != null ? `${car.charge_10_80_min} min` : null,
+    },
+    { label: "AC charge", value: car.ac_kw != null ? `${Number(car.ac_kw)} kW` : null },
+    { label: "Length", value: car.length_mm != null ? `${car.length_mm} mm` : null },
+    { label: "Width", value: car.width_mm != null ? `${car.width_mm} mm` : null },
+    { label: "Height", value: car.height_mm != null ? `${car.height_mm} mm` : null },
+    { label: "Seats", value: car.seats != null ? `${car.seats}` : null },
+    { label: "Drivetrain", value: car.drivetrain || null },
+    { label: "Motors", value: car.motor_count != null ? `${car.motor_count}` : null },
+    { label: "Body", value: car.body_style || null },
+    {
+      label: "Warranty",
+      value: car.warranty_years != null ? `${car.warranty_years} years` : null,
+    },
+    { label: "Service", value: car.service_interval || null },
+    { label: "Built in", value: car.country_of_build || null },
+    { label: "Homologation", value: car.homologation || null },
+    {
+      label: "Lead time",
+      value: car.lead_time_weeks != null ? `${car.lead_time_weeks} weeks` : null,
+    },
+  ];
+  return rows.filter((row) => row.value);
+}

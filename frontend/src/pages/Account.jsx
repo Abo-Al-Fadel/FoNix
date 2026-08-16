@@ -1,7 +1,14 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
-import { fetchOrders } from "../api/endpoints.js";
+import { extractErrorMessage } from "../api/client.js";
+import { cancelOrder, fetchOrders } from "../api/endpoints.js";
+import {
+  DeliveryBlock,
+  OrderLineItems,
+  OrderTimeline,
+} from "../components/orders/OrderDetails.jsx";
 import Button from "../components/ui/Button.jsx";
+import FormError from "../components/ui/FormError.jsx";
 import PageHeader from "../components/ui/PageHeader.jsx";
 import {
   EmptyState,
@@ -14,32 +21,53 @@ import useApiResource from "../hooks/useApiResource.js";
 import { formatDate, formatPrice } from "../lib/format.js";
 
 export default function Account() {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
 
-  const fetcher = useCallback(() => fetchOrders(), []);
-  const { data: orders, error, isLoading, retry } = useApiResource(fetcher);
+  const fetcher = useCallback(() => fetchOrders({ mine: true }), []);
+  const { data: orders, setData, error, isLoading, retry } =
+    useApiResource(fetcher);
+
+  const [busyId, setBusyId] = useState(null);
+  const [actionError, setActionError] = useState("");
+
+  async function handleCancel(order) {
+    if (
+      !window.confirm(
+        `Cancel allocation #${order.id}? The build slot will be returned to the range.`,
+      )
+    ) {
+      return;
+    }
+    setBusyId(order.id);
+    setActionError("");
+    try {
+      const updated = await cancelOrder(order.id);
+      setData((list) => list.map((row) => (row.id === updated.id ? updated : row)));
+    } catch (caught) {
+      setActionError(extractErrorMessage(caught, "That allocation could not be cancelled."));
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   return (
     <div className="pb-24 md:pb-32">
       <PageHeader
         eyebrow="Your account"
         title={user?.first_name ? `Hello, ${user.first_name}.` : "Your orders"}
-        lede={
-          isAdmin
-            ? "You are signed in as a FoNix staff account, so this list shows every order placed on the site."
-            : "Every order you have placed, newest first."
-        }
+        lede="Allocations you have placed, newest first. A pending slot can be cancelled here; after FoNix confirms it, only the hangar can unwind it."
       />
 
       <div className="fx-container">
+        {actionError ? <FormError>{actionError}</FormError> : null}
         {isLoading && !orders ? <LoadingState label="Loading your orders" /> : null}
         {error ? <ErrorState message={error} onRetry={retry} /> : null}
 
         {orders && orders.length === 0 ? (
-          <EmptyState title="No orders yet">
+          <EmptyState title="No allocations yet">
             <p className="mb-8">
-              When you place an order it will appear here with its full line
-              items and total.
+              When you hold a build slot it will appear here with its
+              configuration, handover and status.
             </p>
             <Button to="/store">Browse the range</Button>
           </EmptyState>
@@ -55,7 +83,7 @@ export default function Account() {
                 <div className="flex flex-wrap items-baseline justify-between gap-4 border-b border-hairline pb-5">
                   <div>
                     <h2 className="font-heading text-lg font-bold text-white">
-                      Order #{order.id}
+                      Allocation #{order.id}
                     </h2>
                     <p className="mt-1 font-body text-sm text-muted">
                       {formatDate(order.created_at)} · {order.item_count}{" "}
@@ -73,37 +101,26 @@ export default function Account() {
                   </div>
                 </div>
 
-                <ul className="list-none divide-y divide-hairline">
-                  {order.items.map((item) => (
-                    <li key={item.id} className="flex items-center gap-4 py-4">
-                      {item.car_thumbnail ? (
-                        <img
-                          src={item.car_thumbnail}
-                          alt=""
-                          loading="lazy"
-                          className="aspect-16/9 w-20 shrink-0 rounded-input object-cover sm:w-24"
-                        />
-                      ) : null}
-                      <div className="min-w-0 flex-1">
-                        <p className="font-heading text-base font-semibold text-white">
-                          {item.car_name}
-                        </p>
-                        <p className="mt-0.5 font-body text-sm text-muted">
-                          Quantity {item.quantity} ×{" "}
-                          {formatPrice(item.price_at_purchase)}
-                        </p>
-                      </div>
-                      <p className="font-body text-sm text-white">
-                        {formatPrice(item.subtotal)}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
+                <OrderLineItems items={order.items} />
+                <DeliveryBlock delivery={order.delivery} />
+                <OrderTimeline events={order.events} />
 
-                <p className="pt-2 font-body text-xs text-faint">
-                  Line prices are the prices at the time of ordering, not
-                  today’s catalog price.
-                </p>
+                {order.can_cancel ? (
+                  <div className="mt-5 border-t border-hairline pt-5">
+                    <button
+                      type="button"
+                      onClick={() => handleCancel(order)}
+                      disabled={busyId === order.id}
+                      className="min-h-11 font-body text-xs uppercase tracking-[0.14em] text-faint transition-colors hover:text-ember disabled:opacity-50"
+                    >
+                      {busyId === order.id ? "Cancelling…" : "Cancel this allocation"}
+                    </button>
+                    <p className="mt-2 font-body text-xs text-faint">
+                      The slot returns to the range. After confirmation, write
+                      to the hangar instead.
+                    </p>
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -112,4 +129,3 @@ export default function Account() {
     </div>
   );
 }
-

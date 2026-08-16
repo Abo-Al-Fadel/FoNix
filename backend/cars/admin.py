@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import CarImage, CarModel
+from .models import CarImage, CarModel, CarOption
 
 
 class CarImageInline(admin.TabularInline):
@@ -18,26 +18,28 @@ class CarImageInline(admin.TabularInline):
     fields = ("image", "alt_text", "display_order")
 
 
+class CarOptionInline(admin.TabularInline):
+    model = CarOption
+    extra = 1
+    fields = ("category", "name", "price_delta", "is_default", "sort_order")
+
+
 @admin.register(CarModel)
 class CarModelAdmin(admin.ModelAdmin):
-    inlines = [CarImageInline]
+    inlines = [CarImageInline, CarOptionInline]
 
     list_display = (
         "name",
         "slug",
         "base_price",
-        "range_km",
-        "top_speed_kmh",
+        "body_style",
+        "slots_remaining",
+        "allocation_open",
         "is_hero",
-        "has_real_imagery",
         "is_published",
     )
-    list_filter = ("is_hero", "has_real_imagery", "is_published")
+    list_filter = ("is_hero", "has_real_imagery", "is_published", "body_style", "allocation_open")
     search_fields = ("name", "tagline", "description")
-
-    # Live-fills the slug from the name as you type, so the admin behaves the
-    # same way the model's save() does and there is no surprise when it is left
-    # blank.
     prepopulated_fields = {"slug": ("name",)}
 
     fieldsets = (
@@ -45,7 +47,55 @@ class CarModelAdmin(admin.ModelAdmin):
         ("Pricing", {"fields": ("base_price", "cost")}),
         (
             "Performance",
-            {"fields": ("range_km", "top_speed_kmh", "acceleration_0_100")},
+            {
+                "fields": (
+                    "range_km",
+                    "top_speed_kmh",
+                    "acceleration_0_100",
+                    "power_kw",
+                    "torque_nm",
+                    "weight_kg",
+                    "battery_kwh",
+                    "charge_10_80_min",
+                    "ac_kw",
+                )
+            },
+        ),
+        (
+            "Dimensions",
+            {
+                "fields": (
+                    "length_mm",
+                    "width_mm",
+                    "height_mm",
+                    "seats",
+                    "drivetrain",
+                    "motor_count",
+                    "body_style",
+                )
+            },
+        ),
+        (
+            "Trust",
+            {
+                "fields": (
+                    "warranty_years",
+                    "service_interval",
+                    "country_of_build",
+                    "homologation",
+                )
+            },
+        ),
+        (
+            "Allocation",
+            {
+                "fields": (
+                    "allocation_open",
+                    "slots_remaining",
+                    "lead_time_weeks",
+                    "max_order_quantity",
+                )
+            },
         ),
         ("Imagery", {"fields": ("thumbnail", "thumbnail_alt", "has_real_imagery")}),
         ("Visibility", {"fields": ("is_hero", "is_published")}),

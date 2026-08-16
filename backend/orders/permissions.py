@@ -21,4 +21,4 @@ class IsOrderOwnerOrAdmin(permissions.BasePermission):
         user = request.user
         if not (user and user.is_authenticated):
             return False
-        return obj.user_id == user.id or user.is_fonix_admin
+        return obj.user_id == user.id or user.is_staff_member

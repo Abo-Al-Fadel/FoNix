@@ -38,6 +38,8 @@ function sitemapXml(siteUrl) {
     "/store",
     ...RANGE_SLUGS.map((slug) => `/store/${slug}`),
     "/about",
+    "/ownership",
+    "/faq",
     "/contact",
     "/privacy",
     "/terms",

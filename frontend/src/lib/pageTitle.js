@@ -13,6 +13,8 @@ const EXACT = {
   "/cookies": "Cookies | FoNix",
   "/checkout": "Checkout | FoNix",
   "/account": "Your orders | FoNix",
+  "/ownership": "Ownership | FoNix",
+  "/faq": "Questions | FoNix",
   "/dashboard": "Control panel | FoNix",
 };
 

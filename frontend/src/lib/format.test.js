@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDate, formatPrice, formatPriceDelta, headlineSpecs, specSheet } from "./format.js";
+import { depositFor, formatDate, formatPrice, formatPriceDelta, headlineSpecs, specSheet } from "./format.js";
 
 describe("formatPrice", () => {
   it("formats a decimal string as GBP with no pence", () => {
@@ -16,6 +16,12 @@ describe("formatPrice", () => {
   it("returns a dash for a non-numeric value rather than NaN", () => {
     expect(formatPrice("not a price")).toBe("-");
     expect(formatPrice(undefined)).toBe("-");
+  });
+});
+
+describe("depositFor", () => {
+  it("takes ten percent of the configured total", () => {
+    expect(depositFor("2400000.00")).toBe(240000);
   });
 });
 

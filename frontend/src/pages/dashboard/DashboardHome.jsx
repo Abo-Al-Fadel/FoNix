@@ -7,10 +7,8 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import useApiResource from "../../hooks/useApiResource.js";
 
 /**
- * The dashboard landing: a few headline counts, scoped to the viewer's role.
- * Staff see the catalogue figure; admins also see orders and users. The richer
- * revenue/profit analytics arrive in Phase 2 -- this is the operational
- * at-a-glance.
+ * The dashboard landing: headline counts, scoped to the viewer's role.
+ * Admin and owner get a link through to hangar stats (margin stays owner-only).
  */
 export default function DashboardHome() {
   const { isStaff, isAdmin } = useAuth();
@@ -40,7 +38,7 @@ export default function DashboardHome() {
         At a glance
       </h2>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {tiles.map((tile) => (
           <Link
             key={tile.label}
@@ -63,9 +61,15 @@ export default function DashboardHome() {
       </div>
 
       <p className="mt-8 max-w-2xl font-body text-sm leading-relaxed text-faint">
-        Revenue, margin and the audit trail land in the next phase. This first
-        release is the operational panel: manage the catalogue, track orders
-        through fulfilment, and administer accounts.
+        Staff update specification, imagery and slots. List price and build cost
+        are an admin decision.{" "}
+        {isAdmin ? (
+          <Link to="/dashboard/stats" className="text-muted underline-offset-4 hover:underline">
+            Open hangar stats
+          </Link>
+        ) : (
+          "Confirming an allocation is an admin action."
+        )}
       </p>
     </div>
   );

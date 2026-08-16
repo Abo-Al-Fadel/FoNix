@@ -40,11 +40,29 @@ class OrderEventInline(admin.TabularInline):
 class OrderAdmin(admin.ModelAdmin):
     inlines = [DeliveryInline, OrderItemInline, OrderEventInline]
 
-    list_display = ("id", "user", "status", "total_display", "created_at")
-    list_filter = ("status", "created_at")
-    search_fields = ("id", "user__username", "user__email")
+    list_display = (
+        "id",
+        "user",
+        "status",
+        "payment_status",
+        "deposit_amount",
+        "total_display",
+        "created_at",
+    )
+    list_filter = ("status", "payment_status", "created_at")
+    search_fields = ("id", "user__username", "user__email", "payment_reference")
     date_hierarchy = "created_at"
-    readonly_fields = ("user", "created_at", "updated_at", "total_display")
+    readonly_fields = (
+        "user",
+        "created_at",
+        "updated_at",
+        "total_display",
+        "deposit_amount",
+        "payment_status",
+        "payment_brand",
+        "payment_last4",
+        "payment_reference",
+    )
 
     @admin.display(description="Order total")
     def total_display(self, obj: Order) -> str:

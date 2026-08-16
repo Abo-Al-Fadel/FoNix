@@ -16,10 +16,10 @@ class CarModelViewSet(viewsets.ModelViewSet):
     "thin views" looks like in DRF.
 
     Staff see more than the public does, through the same endpoint: hidden
-    (unpublished) cars, and the internal `cost`/`is_published` fields. That is
-    driven by the caller's role in get_queryset and get_serializer_class rather
-    than a separate admin route, so there is one catalogue API, not two to keep
-    in sync.
+    (unpublished) cars and `is_published`. Build `cost` is admin/owner only —
+    hangar staff must not see or change pricing. That split is driven by the
+    caller's role in get_queryset and the admin serializer, so there is one
+    catalogue API, not two to keep in sync.
     """
 
     permission_classes = [IsStaffOrReadOnly]
@@ -64,10 +64,11 @@ class CarModelViewSet(viewsets.ModelViewSet):
         return queryset
 
     def get_serializer_class(self):
-        # Staff get the fuller admin serializer for every action: it carries the
-        # cost and is_published fields they manage, and makes thumbnail_alt
-        # writable. The public gets the light grid serializer for the list and
-        # the read-only detail serializer for a product page.
+        # Staff get the fuller admin serializer for every action: it carries
+        # is_published and the spec fields they manage. Cost is stripped unless
+        # the caller is an admin or owner. The public gets the light grid
+        # serializer for the list and the read-only detail serializer for a
+        # product page.
         if self._is_staff():
             return CarAdminSerializer
         if self.action == "list":

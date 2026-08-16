@@ -324,6 +324,16 @@ Two things to notice:
    *database record*, never from the request. This is the single most important
    line in the checkout.
 
+Checkout also authorises a **demonstration 10% reservation** (`orders/payments.py`).
+The deposit is computed from the snapshotted total. Stripe's published test
+PANs decide success vs HTTP 402. Brand, last4 and a `pi_demo_*` reference are
+stored; the card number is not. A declined card takes no slot.
+
+Staff cannot change `base_price` or `cost` after a car exists. Cost is omitted
+from staff API responses. Confirming an allocation is admin/owner. That split
+is how a real hangar works: floor staff keep the catalogue true; pricing and
+sales confirmation sit with management.
+
 ---
 
 ## 5. Security

@@ -223,12 +223,14 @@
     width: 100%;
     max-width: 80rem;
     margin-inline: auto;
-    padding-inline: 1.25rem;
+    padding-left: max(1.25rem, env(safe-area-inset-left));
+    padding-right: max(1.25rem, env(safe-area-inset-right));
   }
 
   @media (min-width: 768px) {
     .fx-container {
-      padding-inline: 2.5rem;
+      padding-left: max(2.5rem, env(safe-area-inset-left));
+      padding-right: max(2.5rem, env(safe-area-inset-right));
     }
   }
 

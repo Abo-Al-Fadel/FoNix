@@ -6,13 +6,17 @@ login, me) so the two never blur together. This is where future dashboard
 endpoints -- stats, the audit log -- will join, all behind the admin/owner gate.
 """
 
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from .views import UserAdminViewSet
+from .views import HangarStatsView, UserAdminViewSet
 
 app_name = "admin_api"
 
 router = DefaultRouter()
 router.register("users", UserAdminViewSet, basename="admin-user")
 
-urlpatterns = router.urls
+urlpatterns = [
+    path("stats/", HangarStatsView.as_view(), name="admin-stats"),
+    *router.urls,
+]

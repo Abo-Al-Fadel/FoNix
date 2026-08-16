@@ -14,7 +14,9 @@ import DashboardCars from "./pages/dashboard/DashboardCars.jsx";
 import DashboardHome from "./pages/dashboard/DashboardHome.jsx";
 import DashboardLayout from "./pages/dashboard/DashboardLayout.jsx";
 import DashboardOrders from "./pages/dashboard/DashboardOrders.jsx";
+import DashboardStats from "./pages/dashboard/DashboardStats.jsx";
 import DashboardUsers from "./pages/dashboard/DashboardUsers.jsx";
+import Faq from "./pages/Faq.jsx";
 import ForgotPassword from "./pages/ForgotPassword.jsx";
 import Home from "./pages/Home.jsx";
 import Cookies from "./pages/legal/Cookies.jsx";
@@ -22,6 +24,7 @@ import Privacy from "./pages/legal/Privacy.jsx";
 import Terms from "./pages/legal/Terms.jsx";
 import Login from "./pages/Login.jsx";
 import NotFound from "./pages/NotFound.jsx";
+import Ownership from "./pages/Ownership.jsx";
 import ProductDetail from "./pages/ProductDetail.jsx";
 import Register from "./pages/Register.jsx";
 import ResetPassword from "./pages/ResetPassword.jsx";
@@ -54,6 +57,8 @@ export default function App() {
           <Route path="reset-password" element={<ResetPassword />} />
 
           <Route path="about" element={<About />} />
+          <Route path="ownership" element={<Ownership />} />
+          <Route path="faq" element={<Faq />} />
           <Route path="contact" element={<Contact />} />
           <Route path="privacy" element={<Privacy />} />
           <Route path="terms" element={<Terms />} />
@@ -76,6 +81,7 @@ export default function App() {
               <Route path="cars/:slug/edit" element={<CarForm />} />
               <Route path="orders" element={<DashboardOrders />} />
               <Route element={<RequireRole min="admin" />}>
+                <Route path="stats" element={<DashboardStats />} />
                 <Route path="users" element={<DashboardUsers />} />
               </Route>
             </Route>

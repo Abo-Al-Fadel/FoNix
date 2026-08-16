@@ -5,6 +5,7 @@ from django.db import models, transaction
 from django.db.models import F
 
 from cars.models import CarModel
+from .payments import deposit_for
 
 
 class OrderQuerySet(models.QuerySet):
@@ -49,7 +50,7 @@ class OrderQuerySet(models.QuerySet):
 
 
 class Order(models.Model):
-    """A placed order. No payment is taken -- v1 stops at recording intent."""
+    """A placed allocation. A demonstration 10% reservation is authorised at checkout."""
 
     class Status(models.TextChoices):
         # The fulfilment lifecycle of a built-to-order hypercar. Ordered as the
@@ -95,6 +96,26 @@ class Order(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class PaymentStatus(models.TextChoices):
+        UNPAID = "unpaid", "Unpaid"
+        AUTHORIZED = "authorized", "Reservation authorised"
+        FAILED = "failed", "Failed"
+
+    deposit_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="10% reservation fee, computed server-side. Never taken from the client.",
+    )
+    payment_status = models.CharField(
+        max_length=20,
+        choices=PaymentStatus.choices,
+        default=PaymentStatus.UNPAID,
+    )
+    payment_brand = models.CharField(max_length=20, blank=True)
+    payment_last4 = models.CharField(max_length=4, blank=True)
+    payment_reference = models.CharField(max_length=40, blank=True)
 
     objects = OrderQuerySet.as_manager()
 
@@ -161,13 +182,15 @@ class Order(models.Model):
     @classmethod
     @transaction.atomic
     def create_from_cart(
-        cls, *, user, cart_items: list[dict], delivery: dict
+        cls, *, user, cart_items: list[dict], delivery: dict, payment: dict | None = None
     ) -> "Order":
         """
-        Hold slots, snapshot prices (base + options), and store handover details.
+        Hold slots, snapshot prices (base + options), store handover, and
+        record a demonstration reservation if `payment` is provided.
 
         cart_items is a list of
         {"car": CarModel, "quantity": int, "options": list[CarOption]}.
+        payment is {brand, last4, reference} — never a PAN.
         """
         order = cls.objects.create(user=user)
         DeliveryDetail.objects.create(order=order, **delivery)
@@ -213,12 +236,35 @@ class Order(models.Model):
             )
 
         OrderItem.objects.bulk_create(lines)
+        if payment:
+            order.deposit_amount = deposit_for(order.total)
+            order.payment_status = cls.PaymentStatus.AUTHORIZED
+            order.payment_brand = payment["brand"]
+            order.payment_last4 = payment["last4"]
+            order.payment_reference = payment["reference"]
+            order.save(
+                update_fields=[
+                    "deposit_amount",
+                    "payment_status",
+                    "payment_brand",
+                    "payment_last4",
+                    "payment_reference",
+                    "updated_at",
+                ]
+            )
+            note = (
+                f"Allocation requested. Demonstration reservation "
+                f"£{order.deposit_amount} authorised on "
+                f"{order.payment_brand} ····{order.payment_last4}."
+            )
+        else:
+            note = "Allocation requested"
         OrderEvent.objects.create(
             order=order,
             from_status="",
             to_status=cls.Status.PENDING,
             actor=user,
-            note="Allocation requested",
+            note=note,
         )
         return order
 

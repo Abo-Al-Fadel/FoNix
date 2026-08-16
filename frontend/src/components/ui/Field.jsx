@@ -47,7 +47,7 @@ export default function Field({
         // aria-invalid is how a screen reader knows the field is in an error
         // state; a red border alone communicates nothing to it.
         aria-invalid={error ? true : undefined}
-        className={`mt-2.5 h-12 w-full rounded-input border bg-graphite/60 px-4 font-body text-sm text-white transition-colors placeholder:text-faint focus:outline-none ${
+        className={`mt-2.5 h-12 w-full rounded-input border bg-graphite/60 px-4 font-body text-sm text-white transition-colors placeholder:text-faint focus:outline-none disabled:cursor-not-allowed disabled:opacity-55 ${
           error
             ? "border-ember"
             : "border-hairline focus:border-white/30"

@@ -4,6 +4,7 @@ from rest_framework import serializers
 from cars.models import CarModel, CarOption
 
 from .models import DeliveryDetail, Order, OrderEvent, OrderItem
+from .payments import CardError, PaymentDeclined, authorize_demo_card
 
 
 class OrderItemReadSerializer(serializers.ModelSerializer):
@@ -145,6 +146,11 @@ class OrderReadSerializer(serializers.ModelSerializer):
             "delivery",
             "events",
             "can_cancel",
+            "deposit_amount",
+            "payment_status",
+            "payment_brand",
+            "payment_last4",
+            "payment_reference",
         )
         read_only_fields = fields
 
@@ -174,6 +180,36 @@ class OrderAdminSerializer(OrderReadSerializer):
         read_only_fields = fields
 
 
+class HangarNoteSerializer(serializers.Serializer):
+    note = serializers.CharField(max_length=200)
+
+
+class PaymentWriteSerializer(serializers.Serializer):
+    number = serializers.CharField(write_only=True, max_length=24)
+    exp_month = serializers.IntegerField(min_value=1, max_value=12)
+    exp_year = serializers.IntegerField(min_value=2026, max_value=2100)
+    cvc = serializers.CharField(write_only=True, max_length=4)
+    name = serializers.CharField(max_length=80)
+
+    def validate(self, attrs: dict) -> dict:
+        try:
+            snapshot = authorize_demo_card(
+                number=attrs["number"],
+                exp_month=attrs["exp_month"],
+                exp_year=attrs["exp_year"],
+                cvc=attrs["cvc"],
+                name=attrs["name"],
+            )
+        except CardError as exc:
+            raise serializers.ValidationError({"number": str(exc)}) from exc
+        except PaymentDeclined:
+            raise
+        attrs["snapshot"] = snapshot
+        attrs.pop("number", None)
+        attrs.pop("cvc", None)
+        return attrs
+
+
 class OrderStatusUpdateSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=Order.Status.choices)
 
@@ -181,6 +217,7 @@ class OrderStatusUpdateSerializer(serializers.Serializer):
 class OrderCreateSerializer(serializers.Serializer):
     items = OrderItemWriteSerializer(many=True)
     delivery = DeliverySerializer()
+    payment = PaymentWriteSerializer()
 
     def validate_items(self, value: list[dict]) -> list[dict]:
         if not value:
@@ -193,11 +230,14 @@ class OrderCreateSerializer(serializers.Serializer):
         return value
 
     def create(self, validated_data: dict) -> Order:
+        payment = validated_data.pop("payment")
+        snapshot = payment["snapshot"]
         try:
             return Order.create_from_cart(
                 user=validated_data["user"],
                 cart_items=validated_data["items"],
                 delivery=validated_data["delivery"],
+                payment=snapshot,
             )
         except ValueError as exc:
             raise serializers.ValidationError({"items": str(exc)}) from exc

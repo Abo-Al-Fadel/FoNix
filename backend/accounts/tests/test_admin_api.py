@@ -170,3 +170,27 @@ class DeactivationGuardrailTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         demotable.refresh_from_db()
         self.assertEqual(demotable.role, User.Role.ADMIN)
+
+
+class HangarStatsTests(APITestCase):
+    def setUp(self):
+        self.url = reverse("admin_api:admin-stats")
+
+    def test_staff_cannot_read_hangar_stats(self):
+        self.client.force_authenticate(StaffUserFactory())
+        self.assertEqual(self.client.get(self.url).status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_sees_operational_counts_not_margin(self):
+        self.client.force_authenticate(AdminUserFactory())
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("by_status", response.data)
+        self.assertIn("pipeline_value", response.data)
+        self.assertNotIn("margin", response.data)
+
+    def test_owner_sees_margin(self):
+        self.client.force_authenticate(OwnerUserFactory())
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("revenue", response.data)
+        self.assertIn("margin", response.data)

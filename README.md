@@ -18,12 +18,12 @@ someone else's intellectual property rather than demonstrating anything.
 | [LEARNING.md](LEARNING.md) | Nine hands-on Django exercises with exact commands - start here if you're learning |
 | [DATABASE.md](DATABASE.md) | What database you're using, SQLite vs Postgres, how to switch, fix and reset it, and how to reach the Django admin |
 | [REVIEW_NOTES.md](REVIEW_NOTES.md) | Bugs found and fixed, and the results of an adversarial security probe |
-| [docs/DEPLOY.md](docs/DEPLOY.md) | Production checklist: Railway API, Vercel SPA, required env vars |
+| [docs/DEPLOY.md](docs/DEPLOY.md) | Production checklist: Vercel SPA + Oracle Always Free / Fly.io API |
 
 ### Verified
 
-- **140** backend tests (`python manage.py test`)
-- **52** frontend unit tests (`npm test` in `frontend/`)
+- **174** backend tests (`python manage.py test`)
+- **59** frontend unit tests (`npm test` in `frontend/`)
 - **32** end-to-end browser checks (`node tools/e2e-checklist.mjs`)
 - **21** adversarial security checks (`node tools/security-probe.mjs`)
 
@@ -162,11 +162,13 @@ own design language — not Django's admin, which stays available to superusers 
 `/admin/` on the API.
 
 Four account tiers — **Customer → Staff → Admin → Owner** — decide what each
-account can reach: staff manage the catalogue and can read every allocation;
-admins also advance fulfilment and manage users; owners additionally grant the
-Owner role. Every rule is enforced server-side and mirrored in the UI.
+account can reach: staff manage the catalogue (not list price or cost) and can
+read every allocation; admins also set prices, advance fulfilment and manage
+users; owners additionally grant the Owner role and see margin. Every rule is
+enforced server-side and mirrored in the UI.
 The full matrix and its guardrails (no self-management, owners protected from
-admins, last-owner protection, deactivate-not-delete) are in [ROLES.md](ROLES.md).
+admins, last-owner protection, deactivate-not-delete, staff cannot change MSRP)
+are in [ROLES.md](ROLES.md).
 
 To try it locally, seed a demo team and sign in:
 
@@ -291,13 +293,17 @@ for hover, hairlines, focus rings and large type.
 
 Not omissions - decisions, recorded so they read as such:
 
-- **Payment processing.** Checkout records an order and takes no money.
-- **A live host.** Docker + Vercel are documented in [docs/DEPLOY.md](docs/DEPLOY.md);
-  nothing is pointed at a public URL until you run that checklist.
+- **A live payment processor.** Checkout is a Stripe-shaped replica: it
+  authorises a demonstration 10% reservation, stores brand and last four
+  digits, and never talks to a bank. See [ROLES.md](ROLES.md).
+- **A live host.** Vercel (frontend) plus Oracle Always Free or Fly.io (API)
+  are documented in [docs/DEPLOY.md](docs/DEPLOY.md); nothing is pointed at a
+  public URL until you run that checklist.
 - **A server-side cart.** The cart is React state plus localStorage until
   checkout, which posts the whole thing in one request. There is no `Cart`
   model.
 - **Colour and trim configurators.**
-- **Object storage / Stripe / SMTP.** Password-reset mail uses Django's email
+- **Object storage / SMTP.** Password-reset mail uses Django's email
   backend (console locally and, until you change it, in production). Contact
-  enquiries are persisted and read in the Django admin.
+  enquiries are persisted and read in the Django admin. Checkout is a
+  demonstration reservation, not Stripe.

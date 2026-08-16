@@ -7,6 +7,7 @@ import Button from "../../components/ui/Button.jsx";
 import Field from "../../components/ui/Field.jsx";
 import FormError from "../../components/ui/FormError.jsx";
 import { LoadingState } from "../../components/ui/StateBlock.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 import useApiResource from "../../hooks/useApiResource.js";
 
 const EMPTY = {
@@ -82,6 +83,8 @@ export default function CarForm() {
   const { slug } = useParams();
   const isEdit = Boolean(slug);
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
+  const pricingLocked = isEdit && !isAdmin;
 
   const [form, setForm] = useState(EMPTY);
   const [thumbnail, setThumbnail] = useState(null);
@@ -119,6 +122,8 @@ export default function CarForm() {
 
     const body = new FormData();
     for (const key of TEXT_FIELDS) {
+      if (!isAdmin && key === "cost") continue;
+      if (pricingLocked && key === "base_price") continue;
       if (form[key] !== "" && form[key] != null) body.append(key, form[key]);
     }
     for (const key of BOOL_FIELDS) {
@@ -181,16 +186,26 @@ export default function CarForm() {
             step="0.01"
             value={form.base_price}
             onChange={update("base_price")}
-            required
+            required={!pricingLocked}
+            disabled={pricingLocked}
+            hint={
+              pricingLocked
+                ? "List price is an admin decision. Staff update spec, imagery and slots."
+                : isEdit
+                  ? "Changing this rewrites what the store shows. Staff cannot do this."
+                  : "Initial list price. After the car exists, only an admin can change it."
+            }
           />
-          <Field
-            label="Cost (GBP)"
-            type="number"
-            step="0.01"
-            value={form.cost}
-            onChange={update("cost")}
-            hint="Internal only. Drives margin; never shown publicly."
-          />
+          {isAdmin ? (
+            <Field
+              label="Cost (GBP)"
+              type="number"
+              step="0.01"
+              value={form.cost}
+              onChange={update("cost")}
+              hint="Internal only. Drives margin; never shown to staff or the public."
+            />
+          ) : null}
           <Field
             label="Range (km)"
             type="number"

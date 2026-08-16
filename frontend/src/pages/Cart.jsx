@@ -169,9 +169,8 @@ export default function Cart() {
               </div>
 
               <p className="mt-4 font-body text-xs leading-relaxed text-faint">
-                No payment is taken. Confirming an allocation holds a build slot
-                while it is pending. Cancel from your account until FoNix
-                confirms it.
+                Checkout authorises a 10% demonstration reservation. No money is
+                taken. Cancel from your account until FoNix confirms the slot.
               </p>
             </div>
           </aside>

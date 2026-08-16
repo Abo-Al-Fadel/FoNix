@@ -251,3 +251,84 @@ class UserAdminViewSet(
                 )),
             ),
         ).order_by("-date_joined")
+
+
+class HangarStatsView(generics.GenericAPIView):
+    """
+    GET /api/admin/stats/
+
+    Operational counts for admin and owner. Build cost and margin are owner-only
+    — that figure is what a shop floor must not leak.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        from cars.models import CarModel
+        from orders.models import Order
+
+        status_rows = {
+            row["status"]: row["n"]
+            for row in Order.objects.values("status").annotate(n=Count("id"))
+        }
+        by_status = {
+            key: status_rows.get(key, 0) for key, _label in Order.Status.choices
+        }
+        live = CarModel.objects.filter(is_published=True)
+        pipeline = OrderItem.objects.exclude(
+            order__status=Order.Status.CANCELLED
+        ).aggregate(
+            total=Coalesce(
+                Sum(
+                    F("price_at_purchase") * F("quantity"),
+                    output_field=DecimalField(max_digits=14, decimal_places=2),
+                ),
+                Value(Decimal("0.00"), output_field=DecimalField(
+                    max_digits=14, decimal_places=2
+                )),
+            )
+        )["total"]
+
+        payload = {
+            "orders_total": Order.objects.count(),
+            "by_status": by_status,
+            "in_progress": Order.objects.exclude(
+                status__in=[Order.Status.DELIVERED, Order.Status.CANCELLED]
+            ).count(),
+            "cars_live": live.count(),
+            "slots_remaining": live.aggregate(s=Sum("slots_remaining"))["s"] or 0,
+            "accounts": User.objects.count(),
+            "pipeline_value": str(pipeline),
+        }
+
+        if request.user.is_owner:
+            recognised = OrderItem.objects.filter(
+                order__status__in=[
+                    Order.Status.CONFIRMED,
+                    Order.Status.IN_PRODUCTION,
+                    Order.Status.IN_TRANSIT,
+                    Order.Status.DELIVERED,
+                ]
+            ).select_related("car")
+            revenue = Decimal("0.00")
+            cost = Decimal("0.00")
+            for item in recognised:
+                revenue += item.subtotal
+                if item.car.cost is not None:
+                    cost += item.car.cost * item.quantity
+            deposits = Order.objects.filter(
+                payment_status=Order.PaymentStatus.AUTHORIZED
+            ).exclude(status=Order.Status.CANCELLED).aggregate(
+                s=Coalesce(
+                    Sum("deposit_amount"),
+                    Value(Decimal("0.00"), output_field=DecimalField(
+                        max_digits=14, decimal_places=2
+                    )),
+                )
+            )["s"]
+            payload["revenue"] = str(revenue)
+            payload["build_cost"] = str(cost)
+            payload["margin"] = str(revenue - cost)
+            payload["deposits_authorised"] = str(deposits)
+
+        return Response(payload)

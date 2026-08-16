@@ -100,6 +100,44 @@ class CarAdminSerializer(serializers.ModelSerializer):
             "slug": {"required": False},
         }
 
+    def validate(self, attrs: dict) -> dict:
+        """
+        MSRP and build cost are a pricing decision. Hangar staff may update
+        specs, slots and photography; they may not rewrite what a car sells for.
+        """
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not (user and user.is_authenticated and not user.is_admin):
+            return attrs
+        blocked = {}
+        if "cost" in attrs:
+            incoming = attrs["cost"]
+            current = getattr(self.instance, "cost", None)
+            if self.instance is None or incoming != current:
+                blocked["cost"] = (
+                    "Only an admin or owner can set build cost. "
+                    "Staff may update specification, imagery and slots."
+                )
+                attrs.pop("cost")
+        if self.instance is not None and "base_price" in attrs:
+            if attrs["base_price"] != self.instance.base_price:
+                blocked["base_price"] = (
+                    "Only an admin or owner can change the list price. "
+                    "Staff may update specification, imagery and slots."
+                )
+                attrs.pop("base_price")
+        if blocked:
+            raise serializers.ValidationError(blocked)
+        return attrs
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not (user and user.is_authenticated and user.is_admin):
+            data.pop("cost", None)
+        return data
+
 
 class CarDetailSerializer(serializers.ModelSerializer):
     images = CarImageSerializer(many=True, read_only=True)

@@ -8,6 +8,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 // is never the only thing standing between a user and an action.
 const NAV = [
   { to: "/dashboard", label: "Overview", min: "staff", end: true },
+  { to: "/dashboard/stats", label: "Hangar", min: "admin" },
   { to: "/dashboard/cars", label: "Cars", min: "staff" },
   { to: "/dashboard/orders", label: "Orders", min: "staff" },
   { to: "/dashboard/users", label: "Users", min: "admin" },

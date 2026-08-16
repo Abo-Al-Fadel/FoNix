@@ -73,14 +73,16 @@ export async function fetchOrders({ mine = false } = {}) {
  * @param {{
  *   items: Array<{slug: string, quantity: number, optionIds?: number[] }>,
  *   delivery: object,
+ *   payment: { number: string, exp_month: number, exp_year: number, cvc: string, name: string },
  * }} payload
  *
  * Note what is *not* sent: no prices. The server reads those from its own
  * database, which is what stops a tampered request buying a hypercar for a
  * pound. Sending them would be harmless (the API ignores them) but misleading
- * to anyone reading this code.
+ * to anyone reading this code. The card number is write-only on the API and
+ * is never stored.
  */
-export async function createOrder({ items, delivery }) {
+export async function createOrder({ items, delivery, payment }) {
   const { data } = await api.post("/orders/", {
     items: items.map((item) => ({
       car: item.slug,
@@ -88,6 +90,7 @@ export async function createOrder({ items, delivery }) {
       option_ids: item.optionIds ?? [],
     })),
     delivery,
+    payment,
   });
   return data;
 }
@@ -121,8 +124,8 @@ export async function updateOrderStatus(orderId, status) {
 }
 
 // The car list/detail already come from fetchCars/fetchCar; for staff those
-// same endpoints return the fuller admin shape (including cost and
-// is_published) and every car, hidden ones included.
+// same endpoints return the fuller admin shape (is_published, and cost for
+// admin/owner) and every car, hidden ones included.
 
 export async function createCar(payload) {
   // multipart, because a new car carries an uploaded thumbnail file.
@@ -154,5 +157,15 @@ export async function fetchUsers() {
 
 export async function updateUser(id, patch) {
   const { data } = await api.patch(`/admin/users/${id}/`, patch);
+  return data;
+}
+
+export async function addOrderNote(orderId, note) {
+  const { data } = await api.post(`/orders/${orderId}/note/`, { note });
+  return data;
+}
+
+export async function fetchStats() {
+  const { data } = await api.get("/admin/stats/");
   return data;
 }

@@ -41,18 +41,45 @@ export function OrderTimeline({ events }) {
   if (!events?.length) return null;
   return (
     <ol className="mt-4 space-y-2 border-t border-hairline pt-4">
-      {events.map((event) => (
-        <li key={event.id} className="font-body text-xs text-muted">
-          <span className="text-white">{statusLabel(event.to_status)}</span>
-          <span className="text-faint">
-            {" "}
-            · {formatDateTime(event.at)}
-            {event.actor_name ? ` · ${event.actor_name}` : ""}
-          </span>
-          {event.note ? <span className="block text-faint">{event.note}</span> : null}
-        </li>
-      ))}
+      {events.map((event) => {
+        const hangarNote =
+          event.from_status && event.from_status === event.to_status;
+        return (
+          <li key={event.id} className="font-body text-xs text-muted">
+            <span className="text-white">
+              {hangarNote ? "Hangar note" : statusLabel(event.to_status)}
+            </span>
+            <span className="text-faint">
+              {" "}
+              · {formatDateTime(event.at)}
+              {event.actor_name ? ` · ${event.actor_name}` : ""}
+            </span>
+            {event.note ? <span className="block text-faint">{event.note}</span> : null}
+          </li>
+        );
+      })}
     </ol>
+  );
+}
+
+export function PaymentBlock({ order }) {
+  if (!order?.payment_last4 && !order?.deposit_amount) return null;
+  const brand = (order.payment_brand || "card").replace(/^./, (c) => c.toUpperCase());
+  return (
+    <div className="mt-4 border-t border-hairline pt-4">
+      <p className="font-body text-[10px] uppercase tracking-[0.16em] text-faint">
+        Reservation
+      </p>
+      <p className="mt-2 font-body text-sm text-white">
+        {order.deposit_amount ? formatPrice(order.deposit_amount) : "—"}
+        {order.payment_last4 ? ` · ${brand} ····${order.payment_last4}` : ""}
+      </p>
+      {order.payment_status === "authorized" ? (
+        <p className="mt-1 font-body text-xs text-faint">
+          Demonstration authorisation. No money was taken.
+        </p>
+      ) : null}
+    </div>
   );
 }
 

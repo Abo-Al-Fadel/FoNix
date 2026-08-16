@@ -22,8 +22,8 @@ export default function Terms() {
           unless the hangar raises that cap. You may cancel a pending allocation
           from your account; the slot returns to the range. Once FoNix confirms
           it, only the hangar can unwind it. A delivered allocation is terminal
-          and the slot stays consumed. No payment is taken and no contract is
-          formed.
+          and the slot stays consumed. Checkout authorises a demonstration 10%
+          reservation; no money is taken and no contract is formed.
         </p>
       </LegalSection>
 

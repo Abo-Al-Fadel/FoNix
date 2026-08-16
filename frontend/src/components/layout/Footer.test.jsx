@@ -27,4 +27,21 @@ describe("Footer", () => {
       "https://github.com/Abo-Al-Fadel/FoNix",
     );
   });
+
+  it("links ownership and questions", () => {
+    render(
+      <MemoryRouter>
+        <Footer />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("link", { name: "Ownership" })).toHaveAttribute(
+      "href",
+      "/ownership",
+    );
+    expect(screen.getByRole("link", { name: "Questions" })).toHaveAttribute(
+      "href",
+      "/faq",
+    );
+  });
 });

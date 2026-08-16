@@ -44,7 +44,7 @@ const ORDERING_STEPS = [
   {
     number: "02",
     title: "Hold the slot",
-    body: "Checkout records a pending allocation and takes that slot off the range. No payment is taken.",
+    body: "Checkout authorises a 10% demonstration reservation and takes that slot off the range. No money is taken.",
   },
   {
     number: "03",
@@ -99,7 +99,7 @@ export default function Store() {
       <PageHeader
         eyebrow="The range"
         title="Six allocations."
-        lede="Each model is a build slot, not a stock car. Configure paint, interior and wheels, then hold the slot. No payment is taken on this demonstration."
+        lede="Each model is a build slot, not a stock car. Configure paint, interior and wheels, then hold the slot with a 10% demonstration reservation."
       />
 
       <div className="fx-container">

@@ -2,12 +2,13 @@ from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from accounts.permissions import IsAdmin
+from accounts.permissions import IsAdmin, IsStaffMember
 
-from .models import Order
+from .models import Order, OrderEvent
 from .notify import notify_order_placed, notify_order_status
 from .permissions import IsOrderOwnerOrAdmin
 from .serializers import (
+    HangarNoteSerializer,
     OrderAdminSerializer,
     OrderCreateSerializer,
     OrderReadSerializer,
@@ -42,6 +43,8 @@ class OrderViewSet(
             return OrderCreateSerializer
         if self.action == "set_status":
             return OrderStatusUpdateSerializer
+        if self.action == "add_note":
+            return HangarNoteSerializer
         user = self.request.user
         if user and user.is_authenticated and user.is_staff_member:
             return OrderAdminSerializer
@@ -121,6 +124,28 @@ class OrderViewSet(
         order.transition_to(new_status, actor=request.user, note=note)
         event = order.events.order_by("-at", "-id").first()
         notify_order_status(order, event)
+        return Response(
+            OrderAdminSerializer(order, context=self.get_serializer_context()).data
+        )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="note",
+        permission_classes=[permissions.IsAuthenticated, IsStaffMember],
+    )
+    def add_note(self, request, pk=None):
+        """POST /api/orders/{id}/note/ -- hangar remark, no status change."""
+        order = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        OrderEvent.objects.create(
+            order=order,
+            from_status=order.status,
+            to_status=order.status,
+            actor=request.user,
+            note=serializer.validated_data["note"],
+        )
         return Response(
             OrderAdminSerializer(order, context=self.get_serializer_context()).data
         )

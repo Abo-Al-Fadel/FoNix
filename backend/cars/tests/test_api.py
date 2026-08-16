@@ -273,6 +273,16 @@ class CarWritePermissionTests(APITestCase):
         self.car.refresh_from_db()
         self.assertFalse(self.car.is_published)
 
+    def test_a_staff_member_cannot_change_the_price(self):
+        original = self.car.base_price
+        self.client.force_authenticate(user=StaffUserFactory())
+
+        response = self.client.patch(self.detail_url, {"base_price": "1.00"})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.car.refresh_from_db()
+        self.assertEqual(self.car.base_price, original)
+
 
 class CarVisibilityTests(APITestCase):
     """Hidden cars are invisible to the public but manageable by staff."""
@@ -307,8 +317,14 @@ class CarVisibilityTests(APITestCase):
         row = self.client.get(self.list_url).data["results"][0]
         self.assertNotIn("cost", row)
 
-    def test_staff_see_cost_and_publication_state(self):
+    def test_staff_see_publication_state_but_not_cost(self):
         self.client.force_authenticate(user=StaffUserFactory())
         row = self.client.get(self.list_url).data["results"][0]
-        self.assertIn("cost", row)
+        self.assertNotIn("cost", row)
         self.assertIn("is_published", row)
+
+    def test_an_admin_sees_cost(self):
+        CarModelFactory(name="Priced", cost=Decimal("100000.00"))
+        self.client.force_authenticate(user=AdminUserFactory())
+        row = self.client.get(self.list_url).data["results"][0]
+        self.assertIn("cost", row)

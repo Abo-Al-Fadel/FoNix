@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
 
 import { extractErrorMessage } from "../../api/client.js";
-import { fetchOrders, updateOrderStatus } from "../../api/endpoints.js";
+import { addOrderNote, fetchOrders, updateOrderStatus } from "../../api/endpoints.js";
 import {
   DeliveryBlock,
   OrderLineItems,
   OrderTimeline,
+  PaymentBlock,
 } from "../../components/orders/OrderDetails.jsx";
 import FormError from "../../components/ui/FormError.jsx";
 import {
@@ -42,6 +43,7 @@ export default function DashboardOrders() {
   const [filter, setFilter] = useState("all");
   const [busyId, setBusyId] = useState(null);
   const [actionError, setActionError] = useState("");
+  const [notes, setNotes] = useState({});
 
   const visible = useMemo(() => {
     if (!orders) return null;
@@ -65,6 +67,22 @@ export default function DashboardOrders() {
       setData((list) => list.map((row) => (row.id === updated.id ? updated : row)));
     } catch (caught) {
       setData((list) => list.map((row) => (row.id === previous.id ? previous : row)));
+      setActionError(extractErrorMessage(caught));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function leaveNote(order) {
+    const note = (notes[order.id] || "").trim();
+    if (!note) return;
+    setBusyId(order.id);
+    setActionError("");
+    try {
+      const updated = await addOrderNote(order.id, note);
+      setData((list) => list.map((row) => (row.id === updated.id ? updated : row)));
+      setNotes((current) => ({ ...current, [order.id]: "" }));
+    } catch (caught) {
       setActionError(extractErrorMessage(caught));
     } finally {
       setBusyId(null);
@@ -149,8 +167,36 @@ export default function DashboardOrders() {
               </div>
 
               <OrderLineItems items={order.items} />
+              <PaymentBlock order={order} />
               <DeliveryBlock delivery={order.delivery} />
               <OrderTimeline events={order.events} />
+
+              <div className="mt-4 border-t border-hairline pt-4">
+                <label className="font-body text-[10px] uppercase tracking-[0.16em] text-faint">
+                  Hangar note
+                </label>
+                <textarea
+                  value={notes[order.id] ?? ""}
+                  onChange={(event) =>
+                    setNotes((current) => ({
+                      ...current,
+                      [order.id]: event.target.value,
+                    }))
+                  }
+                  rows={2}
+                  maxLength={200}
+                  placeholder="Visible on the timeline. Does not email the buyer."
+                  className="mt-2 w-full rounded-input border border-hairline bg-graphite/60 px-3 py-2 font-body text-sm text-white placeholder:text-faint focus:border-white/30 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => leaveNote(order)}
+                  disabled={busyId === order.id || !(notes[order.id] || "").trim()}
+                  className="mt-2 min-h-11 rounded-full border border-hairline px-4 font-body text-xs uppercase tracking-[0.12em] text-muted transition-colors hover:border-white/25 hover:text-white disabled:opacity-50"
+                >
+                  Add note
+                </button>
+              </div>
 
               {isAdmin ? (
                 nextStatuses(order.status).length > 0 ? (

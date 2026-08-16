@@ -16,4 +16,8 @@ describe("titleForPath", () => {
   it("names legal pages", () => {
     expect(titleForPath("/privacy")).toBe("Privacy | FoNix");
   });
+
+  it("names ownership", () => {
+    expect(titleForPath("/ownership")).toBe("Ownership | FoNix");
+  });
 });

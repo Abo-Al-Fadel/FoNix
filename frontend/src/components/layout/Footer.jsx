@@ -20,6 +20,8 @@ const COLUMNS = [
     heading: "Company",
     links: [
       { to: "/about", label: "About FoNix" },
+      { to: "/ownership", label: "Ownership" },
+      { to: "/faq", label: "Questions" },
       { to: "/contact", label: "Contact" },
     ],
   },
@@ -161,7 +163,8 @@ export default function Footer() {
             built as a portfolio project.
           </p>
           <p className="font-body text-xs text-faint">
-            No vehicles are for sale. Checkout is a demonstration only.
+            No vehicles are for sale. Checkout authorises a demonstration
+            reservation only.
           </p>
         </div>
       </div>

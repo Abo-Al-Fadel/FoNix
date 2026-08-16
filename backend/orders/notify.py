@@ -20,10 +20,18 @@ def _send(subject: str, body: str, to: str) -> None:
 
 
 def notify_order_placed(order) -> None:
+    deposit = ""
+    if order.payment_status == order.PaymentStatus.AUTHORIZED:
+        deposit = (
+            f"A demonstration reservation of £{order.deposit_amount} was "
+            f"authorised on {order.payment_brand} ····{order.payment_last4}. "
+            "No money was taken.\n\n"
+        )
     _send(
         f"FoNix allocation #{order.pk}",
         (
             f"We have recorded allocation #{order.pk} as pending.\n\n"
+            f"{deposit}"
             "You can cancel it from your account while it is still pending. "
             "Once FoNix confirms it, only the hangar can unwind it.\n"
         ),

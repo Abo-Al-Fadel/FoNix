@@ -79,8 +79,61 @@ export default function DashboardUsers() {
       ) : null}
 
       {users && users.length > 0 ? (
-        <div className="overflow-x-auto rounded-card border border-hairline">
-          <table className="w-full min-w-[720px] border-collapse text-left">
+        <>
+          <ul className="list-none space-y-3 md:hidden">
+            {users.map((row) => {
+              const manageable = canManage(row) && busyId !== row.id;
+              const isSelf = row.id === me?.id;
+              return (
+                <li
+                  key={row.id}
+                  className="rounded-card border border-hairline bg-graphite/50 p-4"
+                >
+                  <p className="font-heading text-base font-semibold text-white">
+                    {row.username}
+                    {isSelf ? (
+                      <span className="ml-2 font-body text-[10px] uppercase tracking-[0.14em] text-faint">
+                        you
+                      </span>
+                    ) : null}
+                  </p>
+                  <p className="mt-1 font-body text-xs text-muted">{row.email}</p>
+                  <p className="mt-2 font-body text-sm text-muted">
+                    {row.order_count} orders · {formatPrice(row.total_spent)}
+                  </p>
+                  <div className="mt-4 flex flex-col gap-3">
+                    <select
+                      value={row.role}
+                      disabled={!manageable}
+                      onChange={(e) => patch(row, { role: e.target.value })}
+                      className="min-h-11 rounded-input border border-hairline bg-graphite/60 px-3 font-body text-sm text-white disabled:opacity-50"
+                    >
+                      {[...new Set([row.role, ...assignableRoles])].map((role) => (
+                        <option key={role} value={role} disabled={!assignableRoles.includes(role)}>
+                          {ROLE_LABEL[role] ?? role}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      disabled={!manageable}
+                      onClick={() => patch(row, { is_active: !row.is_active })}
+                      className={`min-h-11 rounded-full border px-3 font-body text-[10px] font-medium uppercase tracking-[0.14em] disabled:opacity-50 ${
+                        row.is_active
+                          ? "border-ice/40 text-ice"
+                          : "border-hairline text-faint"
+                      }`}
+                    >
+                      {row.is_active ? "Active" : "Disabled"}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="hidden overflow-x-auto rounded-card border border-hairline md:block">
+            <table className="w-full min-w-[720px] border-collapse text-left">
             <thead>
               <tr className="border-b border-hairline bg-graphite/40 font-body text-[10px] uppercase tracking-[0.16em] text-faint">
                 <th className="px-4 py-3 font-medium">User</th>
@@ -150,7 +203,8 @@ export default function DashboardUsers() {
               })}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       ) : null}
 
       <p className="mt-6 max-w-2xl font-body text-xs leading-relaxed text-faint">

@@ -129,7 +129,7 @@ export default function ProductDetail() {
   }
 
   return (
-    <article className="pb-24 md:pb-32">
+    <article className="pb-32 lg:pb-32">
       <div className="fx-container">
         <nav aria-label="Breadcrumb" className="pb-8">
           <Link
@@ -245,7 +245,7 @@ export default function ProductDetail() {
                   <dt className="font-body text-[10px] uppercase tracking-[0.16em] text-faint">
                     {spec.label}
                   </dt>
-                  <dd className="mt-2 font-heading text-2xl font-bold text-white">
+                  <dd className="mt-2 font-heading text-lg font-bold text-white sm:text-2xl">
                     {spec.value}
                     <span className="ml-1 font-body text-xs font-normal text-faint">
                       {spec.unit}
@@ -301,7 +301,7 @@ export default function ProductDetail() {
               </div>
             ) : null}
 
-            <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-10 hidden flex-col gap-3 sm:flex-row lg:flex">
               {waitlist ? (
                 <Button to={waitlistHref} size="lg" fullWidth>
                   Join the waitlist
@@ -334,17 +334,38 @@ export default function ProductDetail() {
                   : "This model is not taking allocations. Join the waitlist and we will tell you when it opens."}
               </p>
             ) : (
-              <p className="mt-4 font-body text-xs leading-relaxed text-faint">
+            <p className="mt-4 font-body text-xs leading-relaxed text-faint">
                 Holding an allocation records a pending slot against your
-                account. You can cancel it from your orders while it is still
-                pending. No payment is taken.
-              </p>
+                account. Checkout authorises a 10% demonstration reservation.
+                You can cancel it from your orders while it is still pending.
+            </p>
             )}
 
             <div className="mt-10 whitespace-pre-line font-body text-sm leading-relaxed text-muted">
               {car.description}
             </div>
           </div>
+        </div>
+      </div>
+
+      <div
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-hairline bg-void/95 px-4 pt-3 backdrop-blur-xl lg:hidden"
+        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+      >
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="truncate font-heading text-sm font-bold text-white">{car.name}</p>
+            <p className="font-body text-xs text-muted">{formatPrice(configuredPrice)}</p>
+          </div>
+          {waitlist ? (
+            <Button to={waitlistHref} size="sm">
+              Waitlist
+            </Button>
+          ) : (
+            <Button onClick={handleAddToCart} size="sm">
+              {inCart ? "Update" : "Hold slot"}
+            </Button>
+          )}
         </div>
       </div>
     </article>

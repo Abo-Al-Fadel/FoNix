@@ -19,6 +19,14 @@ COLLECT = {
     "country": "United Kingdom",
 }
 
+PAYMENT = {
+    "number": "4242424242424242",
+    "exp_month": 12,
+    "exp_year": 2030,
+    "cvc": "123",
+    "name": "Ada Lovelace",
+}
+
 
 class OrderCreateAPITests(APITestCase):
     """POST /api/orders/ -- the checkout endpoint."""
@@ -30,7 +38,12 @@ class OrderCreateAPITests(APITestCase):
         self.aurea = CarModelFactory(name="Aurea", base_price=Decimal("890000.00"))
 
     def place(self, items, delivery=None, **extra):
-        payload = {"items": items, "delivery": delivery or COLLECT, **extra}
+        payload = {
+            "items": items,
+            "delivery": delivery or COLLECT,
+            "payment": extra.pop("payment", PAYMENT),
+            **extra,
+        }
         return self.client.post(self.url, payload, format="json")
 
     def test_anonymous_users_cannot_place_an_order(self):
@@ -55,6 +68,10 @@ class OrderCreateAPITests(APITestCase):
         self.assertEqual(order.items.count(), 2)
         self.assertEqual(order.delivery.method, "collect")
         self.assertTrue(order.events.exists())
+        self.assertEqual(order.payment_status, Order.PaymentStatus.AUTHORIZED)
+        self.assertEqual(order.payment_last4, "4242")
+        self.assertEqual(order.deposit_amount, Decimal("329000.00"))
+        self.assertNotIn("4242424242424242", str(response.data))
 
     def test_the_response_is_the_full_order_not_the_cart_payload(self):
         """The confirmation screen needs an id and a total, not an echo of the
@@ -66,6 +83,8 @@ class OrderCreateAPITests(APITestCase):
 
         self.assertIn("id", response.data)
         self.assertEqual(response.data["total"], "2400000.00")
+        self.assertEqual(response.data["deposit_amount"], "240000.00")
+        self.assertEqual(response.data["payment_last4"], "4242")
         self.assertEqual(response.data["status"], "pending")
         self.assertEqual(response.data["items"][0]["car_name"], "Ignis")
         self.assertTrue(response.data["can_cancel"])
@@ -266,6 +285,34 @@ class OrderCreateAPITests(APITestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn("allocation", mail.outbox[0].subject.lower())
 
+    def test_a_declined_demo_card_takes_no_slot(self):
+        self.ignis.slots_remaining = 4
+        self.ignis.save(update_fields=["slots_remaining"])
+        self.client.force_authenticate(user=self.user)
+
+        response = self.place(
+            [{"car": self.ignis.slug, "quantity": 1}],
+            payment={**PAYMENT, "number": "4000000000000002"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
+        self.assertEqual(Order.objects.count(), 0)
+        self.ignis.refresh_from_db()
+        self.assertEqual(self.ignis.slots_remaining, 4)
+
+    def test_missing_payment_is_rejected(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(
+            self.url,
+            {
+                "items": [{"car": self.ignis.slug, "quantity": 1}],
+                "delivery": COLLECT,
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Order.objects.count(), 0)
+
 
 class OrderListAPITests(APITestCase):
     """GET /api/orders/ -- scoping is the whole story here."""
@@ -425,6 +472,7 @@ class OrderCustomerCancelTests(APITestCase):
             {
                 "items": [{"car": self.car.slug, "quantity": 1}],
                 "delivery": COLLECT,
+                "payment": PAYMENT,
             },
             format="json",
         )
@@ -560,3 +608,20 @@ class OrderStatusTrackingTests(APITestCase):
         self.assertEqual(response.data["status"], Order.Status.IN_PRODUCTION)
         self.assertEqual(response.data["status_display"], "In production")
         self.assertFalse(response.data["can_cancel"])
+
+
+class HangarNoteTests(APITestCase):
+    def setUp(self):
+        self.order = OrderFactory()
+        self.url = reverse("orders:order-add-note", kwargs={"pk": self.order.pk})
+
+    def test_staff_can_leave_a_hangar_note(self):
+        self.client.force_authenticate(user=StaffUserFactory())
+        response = self.client.post(self.url, {"note": "Paint confirmed."}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(self.order.events.filter(note="Paint confirmed.").exists())
+
+    def test_a_customer_cannot_leave_a_hangar_note(self):
+        self.client.force_authenticate(user=self.order.user)
+        response = self.client.post(self.url, {"note": "please hurry"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

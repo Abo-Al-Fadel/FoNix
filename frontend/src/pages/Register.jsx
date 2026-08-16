@@ -71,7 +71,8 @@ export default function Register() {
           Create an account
         </h1>
         <p className="mt-4 font-body text-sm text-muted">
-          Needed to place an order. No payment details are ever collected.
+          Needed to place an allocation. Checkout uses a demonstration card
+          form; no money is taken.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-10 space-y-5" noValidate>

@@ -6,6 +6,7 @@ import {
   DeliveryBlock,
   OrderLineItems,
   OrderTimeline,
+  PaymentBlock,
 } from "../components/orders/OrderDetails.jsx";
 import Button from "../components/ui/Button.jsx";
 import FormError from "../components/ui/FormError.jsx";
@@ -55,7 +56,7 @@ export default function Account() {
       <PageHeader
         eyebrow="Your account"
         title={user?.first_name ? `Hello, ${user.first_name}.` : "Your orders"}
-        lede="Allocations you have placed, newest first. A pending slot can be cancelled here; after FoNix confirms it, only the hangar can unwind it."
+        lede="Allocations you have placed, newest first. A pending slot can be cancelled here; after FoNix confirms it, only the hangar can unwind it. The 10% reservation is a demonstration — no money was taken."
       />
 
       <div className="fx-container">
@@ -80,7 +81,7 @@ export default function Account() {
                 key={order.id}
                 className="rounded-card border border-hairline bg-graphite/50 p-6 md:p-7"
               >
-                <div className="flex flex-wrap items-baseline justify-between gap-4 border-b border-hairline pb-5">
+                <div className="flex flex-col gap-3 border-b border-hairline pb-5 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-4">
                   <div>
                     <h2 className="font-heading text-lg font-bold text-white">
                       Allocation #{order.id}
@@ -91,7 +92,7 @@ export default function Account() {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center justify-between gap-4 sm:justify-end">
                     <StatusPill status={order.status}>
                       {order.status_display}
                     </StatusPill>
@@ -102,6 +103,7 @@ export default function Account() {
                 </div>
 
                 <OrderLineItems items={order.items} />
+                <PaymentBlock order={order} />
                 <DeliveryBlock delivery={order.delivery} />
                 <OrderTimeline events={order.events} />
 

@@ -92,8 +92,67 @@ export default function DashboardCars() {
       ) : null}
 
       {cars && cars.length > 0 ? (
-        <div className="overflow-x-auto rounded-card border border-hairline">
-          <table className="w-full min-w-[640px] border-collapse text-left">
+        <>
+          <ul className="list-none space-y-3 md:hidden">
+            {cars.map((car) => (
+              <li
+                key={car.slug}
+                className={`rounded-card border border-hairline bg-graphite/50 p-4 ${
+                  busySlug === car.slug ? "opacity-60" : ""
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  {car.thumbnail ? (
+                    <img
+                      src={car.thumbnail}
+                      alt=""
+                      className="aspect-16/9 w-20 shrink-0 rounded-input object-cover"
+                    />
+                  ) : null}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-heading text-base font-semibold text-white">
+                      {car.name}
+                    </p>
+                    <p className="mt-1 font-body text-sm text-muted">
+                      {formatPrice(car.base_price)} · {car.slots_remaining ?? "—"} slots
+                      {car.allocation_open === false ? " · closed" : ""}
+                    </p>
+                    <p className="mt-1 font-body text-[10px] uppercase tracking-[0.14em] text-faint">
+                      {car.is_published ? "Live" : "Hidden"}
+                      {car.is_hero ? " · Flagship" : ""}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => togglePublished(car)}
+                    disabled={busySlug === car.slug}
+                    className="min-h-11 rounded-input border border-hairline px-3 font-body text-xs text-muted"
+                  >
+                    {car.is_published ? "Hide" : "Unhide"}
+                  </button>
+                  <Link
+                    to={`/dashboard/cars/${car.slug}/edit`}
+                    className="inline-flex min-h-11 items-center rounded-input border border-hairline px-3 font-body text-xs text-muted"
+                  >
+                    Edit
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => remove(car)}
+                    disabled={busySlug === car.slug}
+                    className="min-h-11 rounded-input border border-hairline px-3 font-body text-xs text-faint"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="hidden overflow-x-auto rounded-card border border-hairline md:block">
+            <table className="w-full min-w-[640px] border-collapse text-left">
             <thead>
               <tr className="border-b border-hairline bg-graphite/40 font-body text-[10px] uppercase tracking-[0.16em] text-faint">
                 <th className="px-4 py-3 font-medium">Model</th>
@@ -181,7 +240,8 @@ export default function DashboardCars() {
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       ) : null}
     </div>
   );

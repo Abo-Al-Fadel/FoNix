@@ -14,10 +14,19 @@ const gbp = new Intl.NumberFormat("en-GB", {
   maximumFractionDigits: 0,
 });
 
+export const DEPOSIT_RATE = 0.1;
+
 /** @param {string|number} value - DRF sends decimals as strings. */
 export function formatPrice(value) {
   const number = Number(value);
   return Number.isFinite(number) ? gbp.format(number) : "-";
+}
+
+/** Ten percent reservation, matching `orders.payments.deposit_for`. */
+export function depositFor(total) {
+  const number = Number(total);
+  if (!Number.isFinite(number)) return 0;
+  return Math.round(number * DEPOSIT_RATE * 100) / 100;
 }
 
 const dateFormatter = new Intl.DateTimeFormat("en-GB", {

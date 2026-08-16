@@ -9,6 +9,7 @@ import usePrefersReducedMotion from "../../hooks/usePrefersReducedMotion.js";
 
 const LINKS = [
   { to: "/store", label: "Store" },
+  { to: "/ownership", label: "Ownership" },
   { to: "/about", label: "About" },
   { to: "/contact", label: "Contact" },
 ];
@@ -262,7 +263,7 @@ export default function Navbar() {
  */
 function navLinkClasses({ isActive }) {
   return [
-    "inline-flex min-h-11 items-center rounded-full px-4",
+    "inline-flex min-h-11 items-center rounded-full px-3 lg:px-4",
     "font-body text-xs uppercase tracking-[0.14em]",
     "transition-colors duration-300",
     isActive ? "bg-ember/15 text-ember" : "text-muted hover:text-white",

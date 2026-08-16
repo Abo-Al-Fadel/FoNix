@@ -216,6 +216,12 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
+        if not settings.DEBUG:
+            raise CommandError(
+                "seed_catalog is for local development only and must not run "
+                "in production."
+            )
+
         assets: Path = options["assets"]
         frames = assets / "scroll"
 

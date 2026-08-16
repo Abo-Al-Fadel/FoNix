@@ -18,6 +18,7 @@ export default function Login() {
 
   // Where RequireAuth was sending them before it bounced them here.
   const redirectTo = location.state?.from ?? "/account";
+  const passwordReset = Boolean(location.state?.passwordReset);
 
   // Already signed in? Don't render a login form. replace keeps the login URL
   // out of history so Back doesn't return to it.
@@ -66,6 +67,15 @@ export default function Login() {
         </p>
 
         <form onSubmit={handleSubmit} className="mt-10 space-y-5" noValidate>
+          {passwordReset ? (
+            <p
+              role="status"
+              className="rounded-input border border-ember/40 bg-ember/10 px-4 py-3 font-body text-sm text-white"
+            >
+              Your password was updated. Sign in with the new one.
+            </p>
+          ) : null}
+
           <FormError>{error}</FormError>
 
           <Field
@@ -91,6 +101,15 @@ export default function Login() {
             autoComplete="current-password"
             required
           />
+
+          <p className="-mt-2 text-right font-body text-sm">
+            <Link
+              to="/forgot-password"
+              className="text-muted underline-offset-4 hover:text-white hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </p>
 
           {/*
             type="submit" is passed explicitly. Button defaults to

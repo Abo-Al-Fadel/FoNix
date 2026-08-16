@@ -6,7 +6,9 @@ import Button from "../components/ui/Button.jsx";
 import { ErrorState, LoadingState } from "../components/ui/StateBlock.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import useApiResource from "../hooks/useApiResource.js";
+import usePageTitle from "../hooks/usePageTitle.js";
 import { formatPrice, headlineSpecs } from "../lib/format.js";
+import { titleForPath } from "../lib/pageTitle.js";
 
 export default function ProductDetail() {
   const { slug } = useParams();
@@ -14,8 +16,9 @@ export default function ProductDetail() {
 
   // Keyed on slug so navigating between two cars refetches rather than
   // reusing the first car's data.
-  const fetcher = useCallback(() => fetchCar(slug), [slug]);
+  const fetcher = useCallback(() => fetchCar(slug, { publicOnly: true }), [slug]);
   const { data: car, error, isLoading, retry } = useApiResource(fetcher);
+  usePageTitle(car?.name ? `${car.name} | FoNix` : titleForPath(`/store/${slug}`));
 
   const [activeImage, setActiveImage] = useState(0);
   const [justAdded, setJustAdded] = useState(false);

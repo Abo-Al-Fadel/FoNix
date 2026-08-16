@@ -6,11 +6,9 @@ import sys
 
 
 def main():
-    # We default to the *local* settings module rather than a single settings.py.
-    # Production deployments are expected to set DJANGO_SETTINGS_MODULE explicitly
-    # (e.g. config.settings.production), so a forgotten env var can never
-    # accidentally boot a production box in DEBUG mode -- it can only ever
-    # fail loudly or run local settings on a developer machine.
+    # manage.py defaults to local settings so `runserver` on a laptop is safe.
+    # gunicorn / ASGI default to production (see wsgi.py / asgi.py) so a
+    # forgotten DJANGO_SETTINGS_MODULE cannot boot DEBUG=True on a server.
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
     try:
         from django.core.management import execute_from_command_line

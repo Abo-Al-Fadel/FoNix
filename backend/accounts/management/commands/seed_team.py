@@ -16,8 +16,9 @@ Nothing about this command should ever run against a real deployment; it is a
 convenience for demoing the roles, in the same spirit as seed_catalog.
 """
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 User = get_user_model()
 
@@ -36,6 +37,12 @@ class Command(BaseCommand):
     help = "Create demo owner/admin/staff accounts and promote the superuser to Owner."
 
     def handle(self, *args, **options):
+        if not settings.DEBUG:
+            raise CommandError(
+                "seed_team is for local development only. It creates accounts "
+                "with published demo passwords and must not run in production."
+            )
+
         for username, email, first_name, role, password in DEMO_TEAM:
             user, created = User.objects.get_or_create(
                 username=username,

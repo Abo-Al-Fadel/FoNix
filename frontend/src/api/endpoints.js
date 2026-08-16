@@ -23,8 +23,10 @@ export async function fetchCars({ publicOnly = false } = {}) {
   return data.results ?? data;
 }
 
-export async function fetchCar(slug) {
-  const { data } = await api.get(`/cars/${slug}/`);
+export async function fetchCar(slug, { publicOnly = false } = {}) {
+  const { data } = await api.get(`/cars/${slug}/`, {
+    skipAuth: publicOnly,
+  });
   return data;
 }
 
@@ -43,6 +45,19 @@ export async function register(payload) {
 export async function fetchCurrentUser() {
   const { data } = await api.get("/auth/me/");
   return data;
+}
+
+export async function requestPasswordReset(email) {
+  const { data } = await api.post(
+    "/auth/password-reset/",
+    { email },
+    { skipAuth: true },
+  );
+  return data;
+}
+
+export async function confirmPasswordReset(payload) {
+  await api.post("/auth/password-reset/confirm/", payload, { skipAuth: true });
 }
 
 // --- Orders ----------------------------------------------------------------

@@ -1,0 +1,9 @@
+-r base.txt
+
+# --- Development / test only ------------------------------------------------
+# Never installed into the production image.
+
+django-debug-toolbar==7.1.0
+factory-boy==3.3.3
+black==26.5.1
+isort==8.0.1

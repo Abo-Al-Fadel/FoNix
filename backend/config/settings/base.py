@@ -56,6 +56,7 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
 ]
 
@@ -110,13 +111,10 @@ ASGI_APPLICATION = "config.asgi.application"
 # --------------------------------------------------------------------------- #
 # Database
 # --------------------------------------------------------------------------- #
-# env.db() parses a single DATABASE_URL string ("postgres://user:pass@host/db"
-# or "sqlite:///db.sqlite3"). One variable instead of five, and it is the format
-# every hosting provider hands you.
-
-DATABASES = {
-    "default": env.db("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
-}
+# Not defined here on purpose. local.py defaults to SQLite so a clone runs with
+# zero setup; production.py requires DATABASE_URL with no fallback. A SQLite
+# default in this file would let a misconfigured server boot against an empty
+# file on an ephemeral disk.
 
 
 # --------------------------------------------------------------------------- #
@@ -194,18 +192,15 @@ REST_FRAMEWORK = {
         "contact": "5/hour",
         "auth_login": "10/min",
         "auth_register": "10/hour",
+        "auth_password_reset": "5/hour",
     },
 }
 
 SIMPLE_JWT = {
-    # Short-lived access tokens limit the blast radius of a leaked token; the
-    # frontend silently trades the refresh token for a new one when it expires.
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    # Each refresh issues a brand-new refresh token and blacklists nothing --
-    # rotation alone already means a stolen refresh token is only useful until
-    # the legitimate client next refreshes.
     "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
@@ -220,3 +215,10 @@ SIMPLE_JWT = {
 # load-bearing, not boilerplate.
 
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
+
+# Absolute origin of the React app, with no trailing slash. Password-reset
+# emails point here. local.py sets the Vite default; production requires the
+# public site origin and refuses localhost.
+FRONTEND_ORIGIN = env("FRONTEND_ORIGIN", default="")
+
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="FoNix <noreply@localhost>")

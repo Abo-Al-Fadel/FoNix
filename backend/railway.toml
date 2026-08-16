@@ -1,0 +1,13 @@
+# Railway service root directory must be `backend/`.
+# See docs/DEPLOY.md. Do not put migrate in the start command — that would
+# race across workers. releaseCommand runs once per deploy.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/api/health/"
+healthcheckTimeout = 30
+releaseCommand = "python manage.py migrate --noinput"
+restartPolicyType = "ON_FAILURE"

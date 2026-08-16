@@ -470,6 +470,8 @@ Without this, a page firing four requests with an expired token starts four
 refreshes. Since Django has `ROTATE_REFRESH_TOKENS` on, the first refresh
 invalidates the token the other three are using - and the user gets logged out
 at random. Sharing one promise means the first 401 refreshes and the rest wait.
+The spent refresh token is then **blacklisted**, so a stolen copy dies the
+moment the legitimate client refreshes.
 
 ### Route protection
 

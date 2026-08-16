@@ -1,0 +1,10 @@
+-r base.txt
+
+# --- Production only --------------------------------------------------------
+# gunicorn serves the WSGI app. WhiteNoise serves Django's collected static
+# files (admin CSS) from the same process. psycopg talks to Postgres.
+# Do not add django-storages here until object storage is actually wired up.
+
+gunicorn==23.0.0
+whitenoise==6.11.0
+psycopg[binary]==3.2.13

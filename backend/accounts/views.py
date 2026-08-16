@@ -1,6 +1,10 @@
+import logging
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
 from django.db.models import (
     Count,
     DecimalField,
@@ -11,16 +15,36 @@ from django.db.models import (
     Value,
 )
 from django.db.models.functions import Coalesce
-from rest_framework import generics, mixins, permissions, throttling, viewsets
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from rest_framework import generics, mixins, permissions, status, throttling, viewsets
+from rest_framework.response import Response
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.token_blacklist.models import (
+    BlacklistedToken,
+    OutstandingToken,
+)
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from orders.models import OrderItem
 
 from .permissions import CanManageUser, IsAdmin
-from .serializers import RegisterSerializer, UserAdminSerializer, UserSerializer
+from .serializers import (
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
+    RegisterSerializer,
+    UserAdminSerializer,
+    UserSerializer,
+)
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
+
+
+def revoke_refresh_tokens(user):
+    """Invalidate outstanding refresh tokens after a password change."""
+    for outstanding in OutstandingToken.objects.filter(user_id=user.pk):
+        BlacklistedToken.objects.get_or_create(token=outstanding)
 
 
 class AuthLoginThrottle(throttling.AnonRateThrottle):
@@ -33,6 +57,12 @@ class AuthRegisterThrottle(throttling.AnonRateThrottle):
     """Same idea for the public register endpoint."""
 
     scope = "auth_register"
+
+
+class AuthPasswordResetThrottle(throttling.AnonRateThrottle):
+    """Password-reset email is a delivery channel; cap it like contact."""
+
+    scope = "auth_password_reset"
 
 
 class RegisterView(generics.CreateAPIView):
@@ -85,6 +115,70 @@ class LoginView(TokenObtainPairView):
 
     serializer_class = FoNixTokenObtainPairSerializer
     throttle_classes = [AuthLoginThrottle]
+
+
+class PasswordResetRequestView(generics.GenericAPIView):
+    """
+    POST /api/auth/password-reset/
+
+    Always returns 200. Telling a caller whether an email is registered is an
+    account-enumeration leak.
+    """
+
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [AuthPasswordResetThrottle]
+    serializer_class = PasswordResetRequestSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+        user = User.objects.filter(email__iexact=email, is_active=True).first()
+        if user:
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            origin = settings.FRONTEND_ORIGIN.rstrip("/")
+            link = f"{origin}/reset-password?uid={uid}&token={token}"
+            try:
+                send_mail(
+                    subject="Reset your FoNix password",
+                    message=(
+                        "A password reset was requested for this FoNix account.\n\n"
+                        f"{link}\n\n"
+                        "If that URL wrapped in a log, use these values on "
+                        f"{origin}/reset-password\n"
+                        f"uid: {uid}\n"
+                        f"token: {token}\n\n"
+                        "If you did not ask for this, you can ignore the message."
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                )
+            except Exception:
+                # A 500 here would tell an attacker the address is registered.
+                logger.exception(
+                    "Password reset email failed for user id %s", user.pk
+                )
+        return Response(
+            {"detail": "If that account exists, we sent instructions."}
+        )
+
+
+class PasswordResetConfirmView(generics.GenericAPIView):
+    """POST /api/auth/password-reset/confirm/"""
+
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [AuthPasswordResetThrottle]
+    serializer_class = PasswordResetConfirmSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data["user"]
+        user.set_password(serializer.validated_data["password"])
+        user.save(update_fields=["password"])
+        revoke_refresh_tokens(user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class MeView(generics.RetrieveUpdateAPIView):

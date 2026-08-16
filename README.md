@@ -18,11 +18,12 @@ someone else's intellectual property rather than demonstrating anything.
 | [LEARNING.md](LEARNING.md) | Nine hands-on Django exercises with exact commands - start here if you're learning |
 | [DATABASE.md](DATABASE.md) | What database you're using, SQLite vs Postgres, how to switch, fix and reset it, and how to reach the Django admin |
 | [REVIEW_NOTES.md](REVIEW_NOTES.md) | Bugs found and fixed, and the results of an adversarial security probe |
+| [docs/DEPLOY.md](docs/DEPLOY.md) | Production checklist: Railway API, Vercel SPA, required env vars |
 
 ### Verified
 
-- **121** backend tests (`python manage.py test`)
-- **44** frontend unit tests (`npm test` in `frontend/`)
+- **140** backend tests (`python manage.py test`)
+- **52** frontend unit tests (`npm test` in `frontend/`)
 - **32** end-to-end browser checks (`node tools/e2e-checklist.mjs`)
 - **21** adversarial security checks (`node tools/security-probe.mjs`)
 
@@ -77,8 +78,9 @@ cd backend
 python manage.py test
 ```
 
-88 tests covering models, serializers, permissions, the N+1 query counts, and
-the full order-creation path.
+140 tests covering models, serializers, permissions, the N+1 query counts,
+auth (including password reset and refresh-token blacklist), and the full
+order-creation path.
 
 Uploads made during tests are redirected to a temporary directory by a custom
 test runner (`config/test_runner.py`), so running the suite never scatters
@@ -286,11 +288,12 @@ for hover, hairlines, focus rings and large type.
 Not omissions - decisions, recorded so they read as such:
 
 - **Payment processing.** Checkout records an order and takes no money.
-- **Deployment.** Local development only. `config/settings/production.py`
-  exists and is written correctly, but nothing is hosted.
+- **A live host.** Docker + Vercel are documented in [docs/DEPLOY.md](docs/DEPLOY.md);
+  nothing is pointed at a public URL until you run that checklist.
 - **A server-side cart.** The cart is React state plus localStorage until
   checkout, which posts the whole thing in one request. There is no `Cart`
   model.
 - **Colour and trim configurators.**
-- **Email sending.** Contact enquiries are persisted and read in the Django
-  admin.
+- **Object storage / Stripe / SMTP.** Password-reset mail uses Django's email
+  backend (console locally and, until you change it, in production). Contact
+  enquiries are persisted and read in the Django admin.

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import FoNixMark from "../brand/FoNixMark.jsx";
@@ -21,9 +20,7 @@ const COLUMNS = [
     heading: "Company",
     links: [
       { to: "/about", label: "About FoNix" },
-      { to: "/about", label: "The hangar" },
       { to: "/contact", label: "Contact" },
-      { to: "/contact", label: "Book a viewing" },
     ],
   },
   {
@@ -35,14 +32,26 @@ const COLUMNS = [
       { to: "/register", label: "Create account" },
     ],
   },
+  {
+    heading: "Legal",
+    links: [
+      { to: "/privacy", label: "Privacy" },
+      { to: "/terms", label: "Terms" },
+      { to: "/cookies", label: "Cookies" },
+    ],
+  },
 ];
 
 const SOCIALS = [
-  { name: "instagram", label: "FoNix on Instagram", href: "#" },
-  { name: "youtube", label: "FoNix on YouTube", href: "#" },
-  { name: "x", label: "FoNix on X", href: "#" },
-  { name: "linkedin", label: "FoNix on LinkedIn", href: "#" },
-  { name: "github", label: "This project on GitHub", href: "#" },
+  { name: "instagram", label: "FoNix on Instagram", href: null },
+  { name: "youtube", label: "FoNix on YouTube", href: null },
+  { name: "x", label: "FoNix on X", href: null },
+  { name: "linkedin", label: "FoNix on LinkedIn", href: null },
+  {
+    name: "github",
+    label: "FoNix source on GitHub",
+    href: "https://github.com/Abo-Al-Fadel/FoNix",
+  },
 ];
 
 export default function Footer() {
@@ -84,29 +93,36 @@ export default function Footer() {
             <ul className="mt-6 flex items-center gap-2">
               {SOCIALS.map((social) => (
                 <li key={social.name}>
-                  <a
-                    href={social.href}
-                    // The links are placeholders for a fictional brand, so they
-                    // must not pretend to go somewhere. aria-disabled tells
-                    // assistive tech the same thing the cursor tells everyone
-                    // else.
-                    aria-disabled="true"
-                    aria-label={`${social.label} (placeholder, FoNix is a fictional marque)`}
-                    onClick={(event) => event.preventDefault()}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-hairline text-muted transition-all duration-300 ease-fonix hover:-translate-y-0.5 hover:border-ember/50 hover:text-ember"
-                  >
-                    <SocialIcon name={social.name} />
-                  </a>
+                  {social.href ? (
+                    <a
+                      href={social.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={social.label}
+                      className="flex h-11 w-11 items-center justify-center rounded-full border border-hairline text-muted transition-all duration-300 ease-fonix hover:-translate-y-0.5 hover:border-ember/50 hover:text-ember"
+                    >
+                      <SocialIcon name={social.name} />
+                    </a>
+                  ) : (
+                    <a
+                      href="#"
+                      aria-disabled="true"
+                      aria-label={`${social.label} (placeholder, FoNix is a fictional marque)`}
+                      onClick={(event) => event.preventDefault()}
+                      className="flex h-11 w-11 items-center justify-center rounded-full border border-hairline text-muted transition-all duration-300 ease-fonix hover:-translate-y-0.5 hover:border-ember/50 hover:text-ember"
+                    >
+                      <SocialIcon name={social.name} />
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>
           </div>
 
           {/* --- Link columns ---
-              On a phone these sit two-up (three-up from sm) rather than stacking
-              into one very tall column, which is what made the footer run on
-              forever on mobile. */}
-          <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3">
+              On a phone these sit two-up rather than stacking into one very
+              tall column, which is what made the footer run on forever. */}
+          <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4">
             {COLUMNS.map((column) => (
               <nav key={column.heading} aria-label={column.heading}>
                 <h2 className="font-body text-[11px] font-semibold uppercase tracking-[0.22em] text-faint">
@@ -139,8 +155,6 @@ export default function Footer() {
           </div>
         </div>
 
-        <NewsletterSignup />
-
         <div className="mt-12 flex flex-col gap-4 border-t border-hairline pt-8 md:flex-row md:items-center md:justify-between">
           <p className="font-body text-xs text-faint">
             © {new Date().getFullYear()} FoNix Automotive. A fictional marque,
@@ -152,68 +166,5 @@ export default function Footer() {
         </div>
       </div>
     </footer>
-  );
-}
-
-/**
- * A newsletter field that does not lie.
- *
- * There is no mailing list behind it, so it confirms locally rather than
- * posting anywhere and pretending. Building a fake form that silently discards
- * an email address would be worse than not having one.
- */
-function NewsletterSignup() {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-
-  return (
-    <div className="mt-12 rounded-card border border-hairline bg-graphite/40 p-6 md:mt-16 md:p-8">
-      <div className="grid gap-6 md:grid-cols-[1.2fr_1fr] md:items-center md:gap-10">
-        <div>
-          <h2 className="font-heading text-lg font-bold text-white md:text-xl">
-            Hear about the next one first.
-          </h2>
-          <p className="mt-2 font-body text-sm text-muted">
-            Occasional updates on the range. Nothing else, ever.
-          </p>
-        </div>
-
-        {submitted ? (
-          <p
-            role="status"
-            className="font-body text-sm text-ember"
-          >
-            Noted. This is a demo, so nothing was actually sent.
-          </p>
-        ) : (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              setSubmitted(true);
-            }}
-            className="flex flex-col gap-3 sm:flex-row"
-          >
-            <label htmlFor="newsletter-email" className="sr-only">
-              Email address
-            </label>
-            <input
-              id="newsletter-email"
-              type="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@example.com"
-              className="h-12 flex-1 rounded-full border border-hairline bg-void/60 px-5 font-body text-sm text-white transition-colors placeholder:text-faint focus:border-white/30 focus:outline-none"
-            />
-            <button
-              type="submit"
-              className="h-12 shrink-0 rounded-full bg-ember-deep px-7 font-body text-xs font-medium uppercase tracking-[0.14em] text-white transition-colors duration-300 hover:bg-ember"
-            >
-              Sign up
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
   );
 }

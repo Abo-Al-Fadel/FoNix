@@ -1,0 +1,14 @@
+# Runtime dependencies shared by every environment.
+# Versions are pinned so a fresh install in six months builds the same
+# environment this project was developed and tested against.
+
+Django==6.0.8
+djangorestframework==3.18.0
+djangorestframework-simplejwt==5.5.1
+django-cors-headers==4.9.0
+
+# Reads settings from environment variables / a .env file, with type coercion.
+django-environ==0.14.0
+
+# Required by Django's ImageField for image validation and processing.
+pillow==12.3.0

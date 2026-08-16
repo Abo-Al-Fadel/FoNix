@@ -1,5 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 
 # get_user_model() rather than importing User directly. It resolves
@@ -193,3 +196,43 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.role = User.Role.CUSTOMER
         user.save(update_fields=["role"])
         return user
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """POST /api/auth/password-reset/ -- email only. Always 200 to the client."""
+
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """POST /api/auth/password-reset/confirm/"""
+
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    password = serializers.CharField(write_only=True, style={"input_type": "password"})
+    password_confirm = serializers.CharField(
+        write_only=True, style={"input_type": "password"}
+    )
+
+    def validate_password(self, value: str) -> str:
+        validate_password(value)
+        return value
+
+    def validate(self, attrs: dict) -> dict:
+        if attrs["password"] != attrs["password_confirm"]:
+            raise serializers.ValidationError(
+                {"password_confirm": "The two password fields didn't match."}
+            )
+
+        invalid = "This reset link is invalid or has expired."
+        try:
+            user_id = force_str(urlsafe_base64_decode(attrs["uid"]))
+            user = User.objects.get(pk=user_id, is_active=True)
+        except (ValueError, TypeError, OverflowError, User.DoesNotExist) as exc:
+            raise serializers.ValidationError(invalid) from exc
+
+        if not default_token_generator.check_token(user, attrs["token"]):
+            raise serializers.ValidationError(invalid)
+
+        attrs["user"] = user
+        return attrs

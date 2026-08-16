@@ -15,11 +15,16 @@ import DashboardHome from "./pages/dashboard/DashboardHome.jsx";
 import DashboardLayout from "./pages/dashboard/DashboardLayout.jsx";
 import DashboardOrders from "./pages/dashboard/DashboardOrders.jsx";
 import DashboardUsers from "./pages/dashboard/DashboardUsers.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
 import Home from "./pages/Home.jsx";
+import Cookies from "./pages/legal/Cookies.jsx";
+import Privacy from "./pages/legal/Privacy.jsx";
+import Terms from "./pages/legal/Terms.jsx";
 import Login from "./pages/Login.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import ProductDetail from "./pages/ProductDetail.jsx";
 import Register from "./pages/Register.jsx";
+import ResetPassword from "./pages/ResetPassword.jsx";
 import Store from "./pages/Store.jsx";
 
 /**
@@ -45,9 +50,14 @@ export default function App() {
 
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
+          <Route path="forgot-password" element={<ForgotPassword />} />
+          <Route path="reset-password" element={<ResetPassword />} />
 
           <Route path="about" element={<About />} />
           <Route path="contact" element={<Contact />} />
+          <Route path="privacy" element={<Privacy />} />
+          <Route path="terms" element={<Terms />} />
+          <Route path="cookies" element={<Cookies />} />
 
           {/* Authenticated area. */}
           <Route element={<RequireAuth />}>

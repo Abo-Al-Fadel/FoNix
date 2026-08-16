@@ -20,9 +20,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 
-# Credentialed requests are not used (we send JWTs in the Authorization header,
-# not cookies), so this stays off.
-CORS_ALLOW_CREDENTIALS = False
+# The Vite app. Password-reset emails use this origin.
+FRONTEND_ORIGIN = "http://localhost:5173"
 
 # SQLite by default so a fresh clone runs with zero setup. Point DATABASE_URL at
 # Postgres to develop against the real production engine.

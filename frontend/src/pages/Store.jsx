@@ -46,7 +46,7 @@ const ORDERING_STEPS = [
 ];
 
 export default function Store() {
-  const fetcher = useCallback(() => fetchCars(), []);
+  const fetcher = useCallback(() => fetchCars({ publicOnly: true }), []);
   const { data: cars, error, isLoading, retry } = useApiResource(fetcher);
   const [sort, setSort] = useState("featured");
 
@@ -152,7 +152,7 @@ export default function Store() {
           </Reveal>
         ) : null}
 
-        {isLoading ? <LoadingState label="Loading the range" /> : null}
+        {isLoading && !cars ? <LoadingState label="Loading the range" /> : null}
         {error ? <ErrorState message={error} onRetry={retry} /> : null}
 
         {cars && cars.length === 0 ? (

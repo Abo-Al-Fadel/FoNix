@@ -34,7 +34,7 @@ export default function DashboardUsers() {
   const myRank = rankOf(me?.role);
 
   const fetcher = useCallback(() => fetchUsers(), []);
-  const { data: users, error, isLoading, retry } = useApiResource(fetcher);
+  const { data: users, setData, error, isLoading, retry } = useApiResource(fetcher);
 
   const [busyId, setBusyId] = useState(null);
   const [actionError, setActionError] = useState("");
@@ -42,10 +42,15 @@ export default function DashboardUsers() {
   async function patch(target, body) {
     setBusyId(target.id);
     setActionError("");
+    const previous = target;
+    setData((list) =>
+      list.map((row) => (row.id === target.id ? { ...row, ...body } : row)),
+    );
     try {
-      await updateUser(target.id, body);
-      retry();
+      const updated = await updateUser(target.id, body);
+      setData((list) => list.map((row) => (row.id === updated.id ? updated : row)));
     } catch (caught) {
+      setData((list) => list.map((row) => (row.id === previous.id ? previous : row)));
       setActionError(extractErrorMessage(caught));
     } finally {
       setBusyId(null);
@@ -66,7 +71,7 @@ export default function DashboardUsers() {
       </h2>
 
       {actionError ? <FormError>{actionError}</FormError> : null}
-      {isLoading ? <LoadingState label="Loading accounts" /> : null}
+      {isLoading && !users ? <LoadingState label="Loading accounts" /> : null}
       {error ? <ErrorState message={error} onRetry={retry} /> : null}
 
       {users && users.length === 0 ? (

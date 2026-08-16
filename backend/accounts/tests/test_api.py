@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -12,9 +13,6 @@ class RegistrationAPITests(APITestCase):
     """POST /api/auth/register/"""
 
     def setUp(self):
-        # reverse() rather than a hardcoded "/api/auth/register/": if the URL
-        # ever moves, these tests follow it instead of failing for the wrong
-        # reason.
         self.url = reverse("accounts:register")
         self.payload = {
             "username": "newdriver",
@@ -22,6 +20,10 @@ class RegistrationAPITests(APITestCase):
             "password": TEST_PASSWORD,
             "password_confirm": TEST_PASSWORD,
         }
+        cache.clear()
+
+    def tearDown(self):
+        cache.clear()
 
     def test_anyone_can_register(self):
         response = self.client.post(self.url, self.payload)
@@ -89,6 +91,10 @@ class LoginAPITests(APITestCase):
     def setUp(self):
         self.url = reverse("accounts:login")
         self.user = UserFactory(username="driver")
+        cache.clear()
+
+    def tearDown(self):
+        cache.clear()
 
     def test_valid_credentials_return_a_token_pair_and_the_user(self):
         response = self.client.post(
@@ -136,6 +142,16 @@ class LoginAPITests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_flooding_login_is_throttled(self):
+        """Ten failures per minute are allowed; the eleventh must be 429."""
+        payload = {"username": "driver", "password": "wrong-password"}
+        for _ in range(10):
+            response = self.client.post(self.url, payload)
+            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        response = self.client.post(self.url, payload)
+        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 
 
 class MeAPITests(APITestCase):

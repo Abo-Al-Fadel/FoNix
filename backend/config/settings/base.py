@@ -190,7 +190,11 @@ REST_FRAMEWORK = {
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
     # Rates are declared centrally so every throttled scope is visible in one
     # place. contact/views.py opts its public form into the "contact" scope.
-    "DEFAULT_THROTTLE_RATES": {"contact": "5/hour"},
+    "DEFAULT_THROTTLE_RATES": {
+        "contact": "5/hour",
+        "auth_login": "10/min",
+        "auth_register": "10/hour",
+    },
 }
 
 SIMPLE_JWT = {

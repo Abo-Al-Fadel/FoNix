@@ -38,6 +38,8 @@ SECURE_HSTS_PRELOAD = True
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
 
 # Behind a reverse proxy (nginx, a PaaS router) Django sees plain HTTP; this
 # header is how the proxy tells it the original request was HTTPS. Only safe

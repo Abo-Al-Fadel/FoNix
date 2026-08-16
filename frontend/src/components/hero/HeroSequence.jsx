@@ -124,11 +124,12 @@ export default function HeroSequence() {
   // ------------------------------------------------------------------ //
 
   /**
-   * Paint one frame, cropped to cover the canvas.
+   * Paint one frame onto the canvas.
    *
-   * Reimplements `object-fit: cover` by hand: a canvas has no such property,
-   * and drawImage stretches to whatever rectangle it is given -- which would
-   * distort the car on any viewport that is not 16:9.
+   * Desktop uses cover-centre (the canvas equivalent of object-fit: cover) so
+   * a 16:9 studio still fills a wide viewport without letterboxing. Mobile
+   * fits to width and parks the strip in the upper third — cover-crop on a
+   * tall phone put the headlights under the stacked headline and CTAs.
    */
   const drawFrame = useCallback((index) => {
     const canvas = canvasRef.current;
@@ -139,23 +140,39 @@ export default function HeroSequence() {
     const { width, height } = canvas;
     if (width === 0 || height === 0) return;
 
-    const scale = Math.max(
-      width / image.naturalWidth,
-      height / image.naturalHeight,
-    );
-    const drawWidth = image.naturalWidth * scale;
-    const drawHeight = image.naturalHeight * scale;
+    let drawWidth;
+    let drawHeight;
+    let dx;
+    let dy;
+
+    if (isMobile) {
+      // Fit the 16:9 frame to the viewport WIDTH so the whole car stays in
+      // view, then park that strip in the upper third. Cover-crop on a
+      // portrait phone kept the image's full height, put the headlights
+      // under the stacked headline/CTAs, and cropped ~74% of the frame.
+      // Fit-to-width, then a modest zoom so the car isn't a thin 16:9 ribbon
+      // on a tall phone. 1.22 still keeps nearly the whole body in frame
+      // (~8% side crop) instead of the old cover-crop that hid ~74%.
+      const scale = (width / image.naturalWidth) * 1.22;
+      drawWidth = image.naturalWidth * scale;
+      drawHeight = image.naturalHeight * scale;
+      dx = (width - drawWidth) / 2;
+      dy = height * 0.36 - drawHeight / 2;
+    } else {
+      const scale = Math.max(
+        width / image.naturalWidth,
+        height / image.naturalHeight,
+      );
+      drawWidth = image.naturalWidth * scale;
+      drawHeight = image.naturalHeight * scale;
+      dx = (width - drawWidth) / 2;
+      dy = (height - drawHeight) / 2;
+    }
 
     context.clearRect(0, 0, width, height);
-    context.drawImage(
-      image,
-      (width - drawWidth) / 2,
-      (height - drawHeight) / 2,
-      drawWidth,
-      drawHeight,
-    );
+    context.drawImage(image, dx, dy, drawWidth, drawHeight);
     drawnFrameRef.current = index;
-  }, []);
+  }, [isMobile]);
 
   /** Size the canvas pixel buffer to its CSS box, accounting for DPR. */
   const resizeCanvas = useCallback(() => {
@@ -434,7 +451,9 @@ export default function HeroSequence() {
         <img
           src={frameUrl(source, Math.floor(source.count * 0.56))}
           alt="The FoNix Ignis in a dark studio with its dihedral door raised."
-          className="absolute inset-0 h-full w-full object-cover"
+          className={`absolute inset-0 h-full w-full ${
+            isMobile ? "object-contain object-[center_36%]" : "object-cover"
+          }`}
         />
       ) : null}
 
@@ -452,9 +471,9 @@ export default function HeroSequence() {
           // would replace the whole page with a native player.
           playsInline
           preload="auto"
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-[1100ms] ease-[var(--ease-fonix)] ${
-            isIntro ? "opacity-100" : "pointer-events-none opacity-0"
-          }`}
+          className={`absolute inset-0 h-full w-full transition-opacity duration-[1100ms] ease-[var(--ease-fonix)] ${
+            isMobile ? "object-contain object-[center_36%]" : "object-cover"
+          } ${isIntro ? "opacity-100" : "pointer-events-none opacity-0"}`}
           aria-hidden="true"
         />
       ) : null}
@@ -486,7 +505,7 @@ export default function HeroSequence() {
           willChange: "transform",
         }}
       >
-        <div className="fx-container w-full pb-20 md:pb-28">
+        <div className="fx-container w-full pb-16 md:pb-28">
           <div
             className={`max-w-3xl transition-opacity duration-500 ${
               isUiVisible ? "opacity-100" : "opacity-0"
@@ -600,7 +619,7 @@ export default function HeroSequence() {
             isUiVisible && scrubProgress < 0.03 ? "opacity-100" : "opacity-0"
           }`}
         >
-          <span className="font-body text-[10px] uppercase tracking-[0.34em] text-white/40">
+          <span className="font-body text-[10px] uppercase tracking-[0.34em] text-white/60">
             {isIntro ? "Scroll to skip" : "Scroll"}
           </span>
           <span className="relative block h-10 w-px overflow-hidden bg-white/15">

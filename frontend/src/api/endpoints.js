@@ -11,8 +11,12 @@ import { api } from "./client.js";
 
 // --- Catalog ---------------------------------------------------------------
 
-export async function fetchCars() {
-  const { data } = await api.get("/cars/");
+export async function fetchCars({ publicOnly = false } = {}) {
+  const { data } = await api.get("/cars/", {
+    // Public pages must not send a staff JWT: the same endpoint returns
+    // unpublished cars (and cost) to staff, which would leak them onto /store.
+    skipAuth: publicOnly,
+  });
   // The API is paginated; the store grid wants the array. Unwrapping here means
   // no component has to know about the envelope. If the catalog ever outgrows
   // one page, this is the single place that has to learn to follow `next`.

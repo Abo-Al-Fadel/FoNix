@@ -20,18 +20,30 @@ import { formatPrice } from "../../lib/format.js";
  */
 export default function DashboardCars() {
   const fetcher = useCallback(() => fetchCars(), []);
-  const { data: cars, error, isLoading, retry } = useApiResource(fetcher);
+  const { data: cars, setData, error, isLoading, retry } = useApiResource(fetcher);
 
   const [busySlug, setBusySlug] = useState(null);
   const [actionError, setActionError] = useState("");
 
   async function togglePublished(car) {
+    const next = !car.is_published;
     setBusySlug(car.slug);
     setActionError("");
+    // Flip the row immediately so the table does not unmount into the 45vh
+    // loading block while the PATCH is in flight.
+    setData((list) =>
+      list.map((row) =>
+        row.slug === car.slug ? { ...row, is_published: next } : row,
+      ),
+    );
     try {
-      await updateCar(car.slug, { is_published: !car.is_published });
-      retry();
+      await updateCar(car.slug, { is_published: next });
     } catch (caught) {
+      setData((list) =>
+        list.map((row) =>
+          row.slug === car.slug ? { ...row, is_published: !next } : row,
+        ),
+      );
       setActionError(extractErrorMessage(caught));
     } finally {
       setBusySlug(null);
@@ -42,10 +54,12 @@ export default function DashboardCars() {
     if (!window.confirm(`Delete ${car.name}? This cannot be undone.`)) return;
     setBusySlug(car.slug);
     setActionError("");
+    const snapshot = cars;
+    setData((list) => list.filter((row) => row.slug !== car.slug));
     try {
       await deleteCar(car.slug);
-      retry();
     } catch (caught) {
+      setData(snapshot);
       // A car referenced by an order is PROTECTed server-side; surface that
       // rather than letting the request fail silently.
       setActionError(extractErrorMessage(caught, "That car could not be deleted."));
@@ -67,7 +81,7 @@ export default function DashboardCars() {
 
       {actionError ? <FormError>{actionError}</FormError> : null}
 
-      {isLoading ? <LoadingState label="Loading the catalogue" /> : null}
+      {isLoading && !cars ? <LoadingState label="Loading the catalogue" /> : null}
       {error ? <ErrorState message={error} onRetry={retry} /> : null}
 
       {cars && cars.length === 0 ? (
@@ -92,7 +106,9 @@ export default function DashboardCars() {
               {cars.map((car) => (
                 <tr
                   key={car.slug}
-                  className="border-b border-hairline last:border-0"
+                  className={`border-b border-hairline last:border-0 ${
+                    busySlug === car.slug ? "opacity-60" : ""
+                  }`}
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -135,6 +151,7 @@ export default function DashboardCars() {
                         type="button"
                         onClick={() => togglePublished(car)}
                         disabled={busySlug === car.slug}
+                        aria-busy={busySlug === car.slug}
                         className="rounded-input border border-hairline px-3 py-1.5 font-body text-xs text-muted transition-colors hover:border-white/25 hover:text-white disabled:opacity-50"
                       >
                         {car.is_published ? "Hide" : "Unhide"}

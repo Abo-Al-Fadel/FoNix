@@ -38,6 +38,9 @@ dist-ssr/
 Thumbs.db
 *.swp
 
+# Local Playwright health-audit screenshots (regenerate with tools/health-audit.mjs)
+tools/_audit-shots/
+
 # --- Logs -------------------------------------------------------------------
 npm-debug.log*
 yarn-debug.log*

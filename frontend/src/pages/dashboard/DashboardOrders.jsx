@@ -21,7 +21,7 @@ import { nextStatuses, statusLabel } from "../../lib/orderStatus.js";
  */
 export default function DashboardOrders() {
   const fetcher = useCallback(() => fetchOrders(), []);
-  const { data: orders, error, isLoading, retry } = useApiResource(fetcher);
+  const { data: orders, setData, error, isLoading, retry } = useApiResource(fetcher);
 
   const [busyId, setBusyId] = useState(null);
   const [actionError, setActionError] = useState("");
@@ -29,10 +29,19 @@ export default function DashboardOrders() {
   async function advance(order, status) {
     setBusyId(order.id);
     setActionError("");
+    const previous = order;
+    setData((list) =>
+      list.map((row) =>
+        row.id === order.id
+          ? { ...row, status, status_display: statusLabel(status) }
+          : row,
+      ),
+    );
     try {
-      await updateOrderStatus(order.id, status);
-      retry();
+      const updated = await updateOrderStatus(order.id, status);
+      setData((list) => list.map((row) => (row.id === updated.id ? updated : row)));
     } catch (caught) {
+      setData((list) => list.map((row) => (row.id === previous.id ? previous : row)));
       setActionError(extractErrorMessage(caught));
     } finally {
       setBusyId(null);
@@ -46,7 +55,7 @@ export default function DashboardOrders() {
       </h2>
 
       {actionError ? <FormError>{actionError}</FormError> : null}
-      {isLoading ? <LoadingState label="Loading orders" /> : null}
+      {isLoading && !orders ? <LoadingState label="Loading orders" /> : null}
       {error ? <ErrorState message={error} onRetry={retry} /> : null}
 
       {orders && orders.length === 0 ? (

@@ -41,7 +41,7 @@ const TIMELINE = [
 ];
 
 export default function Home() {
-  const fetcher = useCallback(() => fetchCars(), []);
+  const fetcher = useCallback(() => fetchCars({ publicOnly: true }), []);
   const { data: cars } = useApiResource(fetcher);
 
   // A failed fetch degrades to simply not rendering the strip. The hero and

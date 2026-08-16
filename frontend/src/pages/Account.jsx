@@ -32,7 +32,7 @@ export default function Account() {
       />
 
       <div className="fx-container">
-        {isLoading ? <LoadingState label="Loading your orders" /> : null}
+        {isLoading && !orders ? <LoadingState label="Loading your orders" /> : null}
         {error ? <ErrorState message={error} onRetry={retry} /> : null}
 
         {orders && orders.length === 0 ? (

@@ -11,7 +11,7 @@ from django.db.models import (
     Value,
 )
 from django.db.models.functions import Coalesce
-from rest_framework import generics, mixins, permissions, viewsets
+from rest_framework import generics, mixins, permissions, throttling, viewsets
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -21,6 +21,18 @@ from .permissions import CanManageUser, IsAdmin
 from .serializers import RegisterSerializer, UserAdminSerializer, UserSerializer
 
 User = get_user_model()
+
+
+class AuthLoginThrottle(throttling.AnonRateThrottle):
+    """Stop credential stuffing. Contact already has a 5/hour cap; login had none."""
+
+    scope = "auth_login"
+
+
+class AuthRegisterThrottle(throttling.AnonRateThrottle):
+    """Same idea for the public register endpoint."""
+
+    scope = "auth_register"
 
 
 class RegisterView(generics.CreateAPIView):
@@ -38,6 +50,7 @@ class RegisterView(generics.CreateAPIView):
     # Explicitly public: overrides the project-wide IsAuthenticated default,
     # which would otherwise make it impossible to sign up without an account.
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [AuthRegisterThrottle]
 
 
 class FoNixTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -71,6 +84,7 @@ class LoginView(TokenObtainPairView):
     """POST /api/auth/login/ -- exchanges username + password for a token pair."""
 
     serializer_class = FoNixTokenObtainPairSerializer
+    throttle_classes = [AuthLoginThrottle]
 
 
 class MeView(generics.RetrieveUpdateAPIView):

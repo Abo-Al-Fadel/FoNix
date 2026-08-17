@@ -80,22 +80,44 @@ redirect so a mesh probe is not 301'd into a false-unhealthy loop.
 
 `seed_team` and `seed_catalog` refuse to run when `DEBUG` is False.
 
-### Oracle Always Free, short version
+### Oracle Always Free — what runs on the VM
 
-1. Create an Always Free Ampere A1 instance in a region that still has ARM
-   quota (Phoenix, Chicago, or Frankfurt are the usual bets).
-2. Open ingress 80/443 (and 22 for you). Point a DNS name at the public IP.
-3. Install Docker. Copy `backend/.env` onto the box (never commit it).
-4. Run Postgres and the API:
+Files live in `backend/`: `docker-compose.yml`, `Caddyfile`,
+`entrypoint.prod.sh`, `.env.oracle.example`.
+
+On the box, after Docker is installed and DNS points at the public IP:
 
 ```bash
-docker compose up -d   # or: docker run ... for the API image plus a postgres container
+git clone https://github.com/Abo-Al-Fadel/FoNix.git
+cd FoNix/backend
+cp .env.oracle.example .env
+nano .env   # SECRET_KEY, POSTGRES_PASSWORD, API_DOMAIN, Vercel origin
+
+docker compose up -d --build
+docker compose logs -f api caddy
 ```
 
-5. Put Caddy or nginx in front for TLS (`caddy reverse-proxy --from api.example.com --to localhost:8000`).
-6. Confirm `GET https://api.example.com/api/health/` is 200.
+Confirm `https://$API_DOMAIN/api/health/` returns `{"ok": true}`.
 
-A 1-click Marketplace image is not required. Ubuntu + Docker is enough.
+Create an admin (not `seed_team` — that command refuses in production):
+
+```bash
+docker compose exec api python manage.py createsuperuser
+```
+
+Car images are stored in the `media_data` volume and served by Caddy at
+`/media/`. Add models through `https://$API_DOMAIN/admin/`.
+
+Caddy obtains a Let's Encrypt certificate for `API_DOMAIN`. That name must
+resolve to the VM before `docker compose up`. Open **80 and 443** in the
+Oracle security list; Ubuntu on OCI often also needs:
+
+```bash
+sudo iptables -I INPUT 1 -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT 1 -p tcp --dport 443 -j ACCEPT
+```
+
+Then set Vercel `VITE_API_BASE_URL=https://$API_DOMAIN/api` and redeploy.
 
 ### Fly.io, short version
 

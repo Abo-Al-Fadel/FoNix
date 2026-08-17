@@ -1,0 +1,12 @@
+{$API_DOMAIN} {
+	encode gzip
+
+	handle /media/* {
+		root * /srv
+		file_server
+	}
+
+	handle {
+		reverse_proxy api:8000
+	}
+}

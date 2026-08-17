@@ -3,6 +3,7 @@
 .env
 .env.*
 !.env.example
+!.env.oracle.example
 __pycache__
 *.py[cod]
 *.sqlite3

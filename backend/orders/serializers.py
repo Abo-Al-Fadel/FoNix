@@ -1,3 +1,5 @@
+import re
+
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
@@ -39,8 +41,24 @@ class DeliverySerializer(serializers.ModelSerializer):
             "postcode",
             "country",
         )
+        extra_kwargs = {
+            "phone": {"required": True, "allow_blank": False},
+            "full_name": {"required": True, "allow_blank": False},
+        }
+
+    def validate_phone(self, value: str) -> str:
+        digits = re.sub(r"\D", "", value or "")
+        if len(digits) < 7:
+            raise serializers.ValidationError(
+                "Enter a phone number the hangar can reach."
+            )
+        return (value or "").strip()
 
     def validate(self, attrs: dict) -> dict:
+        if not (attrs.get("phone") or "").strip():
+            raise serializers.ValidationError(
+                {"phone": "A phone number is required."}
+            )
         if attrs.get("method") == DeliveryDetail.Method.DELIVER:
             missing = [field for field in ("line1", "city", "postcode") if not attrs.get(field)]
             if missing:

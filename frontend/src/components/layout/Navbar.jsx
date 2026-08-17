@@ -5,6 +5,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import FoNixMark from "../brand/FoNixMark.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useCart } from "../../context/CartContext.jsx";
+import useMediaQuery from "../../hooks/useMediaQuery.js";
 import usePrefersReducedMotion from "../../hooks/usePrefersReducedMotion.js";
 
 const LINKS = [
@@ -22,10 +23,17 @@ export default function Navbar() {
   const { itemCount } = useCart();
   const drawerToggleRef = useRef(null);
   const prefersReducedMotion = usePrefersReducedMotion();
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const unfurl = isDesktop && !prefersReducedMotion;
+  const [clipDone, setClipDone] = useState(!unfurl);
 
   // Close the drawer on navigation, so tapping a link does not leave the menu
   // covering the page you just opened.
   useEffect(() => setIsDrawerOpen(false), [pathname]);
+
+  useEffect(() => {
+    if (!unfurl) setClipDone(true);
+  }, [unfurl]);
 
   // The bar deepens its glass once you scroll away from the top. Over the hero
   // it stays almost invisible; over content it earns a little more weight.
@@ -53,45 +61,34 @@ export default function Navbar() {
   }, [isDrawerOpen]);
 
   return (
-    <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-4 md:pt-6">
-      {/*
-        OPENING ANIMATION.
-
-        On load the bar unfurls: it starts clipped to a small pill on the left
-        (just the mark showing, like a closed capsule) and the clip opens
-        rightward to the full width, while the links fade in a beat behind it.
-        clipPath is animated rather than width because clipping leaves the
-        internal flex layout untouched, so nothing reflows or jumps as it opens.
-
-        Reduced motion skips straight to the open state.
-      */}
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:px-4 md:pt-6">
       <motion.nav
         aria-label="Primary"
         initial={
-          prefersReducedMotion
-            ? false
-            : { clipPath: "inset(0% 87% 0% 0% round 999px)" }
+          unfurl && !clipDone
+            ? { clipPath: "inset(0% 87% 0% 0% round 999px)" }
+            : false
         }
-        animate={{ clipPath: "inset(0% 0% 0% 0% round 999px)" }}
+        animate={
+          clipDone || !unfurl
+            ? { clipPath: "none" }
+            : { clipPath: "inset(0% 0% 0% 0% round 999px)" }
+        }
+        onAnimationComplete={() => setClipDone(true)}
         transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
-        // A darker, more present glass than before: a real tinted panel with a
-        // clear hairline and a soft drop shadow, not a barely-there wash. It
-        // deepens further once you scroll off the hero. `backdrop-saturate`
-        // makes the ember background glow read through it, which is what stops
-        // it looking like flat grey plastic.
-        className={`pointer-events-auto flex w-full max-w-5xl items-center rounded-full border shadow-[0_10px_40px_-12px_rgba(0,0,0,0.7)] backdrop-blur-2xl backdrop-saturate-150 transition-colors duration-500 ${
+        className={`pointer-events-auto flex w-full max-w-5xl min-w-0 items-center rounded-full border shadow-[0_10px_40px_-12px_rgba(0,0,0,0.7)] backdrop-blur-2xl backdrop-saturate-150 transition-colors duration-500 ${
           isScrolled
             ? "border-white/15 bg-[rgba(9,11,16,0.78)]"
             : "border-white/12 bg-[rgba(9,11,16,0.5)]"
-        } py-2 pl-5 pr-2 md:pl-6`}
+        } py-1.5 pl-4 pr-1.5 md:py-2 md:pl-6 md:pr-2`}
       >
         <Link
           to="/"
-          className="group flex shrink-0 items-center gap-2.5 text-white transition-colors hover:text-ember"
+          className="group flex min-w-0 shrink items-center gap-2 text-white transition-colors hover:text-ember md:gap-2.5"
           aria-label="FoNix home"
         >
-          <FoNixMark className="h-4 w-auto transition-transform duration-500 ease-fonix group-hover:scale-110 md:h-5" />
-          <span className="font-heading text-sm font-bold tracking-[0.2em] md:text-base">
+          <FoNixMark className="h-4 w-auto shrink-0 transition-transform duration-500 ease-fonix group-hover:scale-110 md:h-5" />
+          <span className="truncate font-heading text-sm font-bold tracking-[0.16em] md:text-base md:tracking-[0.2em]">
             FONIX
           </span>
         </Link>
@@ -105,7 +102,7 @@ export default function Navbar() {
           wrapper, and one `gap` value spaces everything inside it -- so the
           rhythm is identical across the whole bar.
         */}
-        <div className="ml-auto hidden items-center gap-1 md:flex">
+        <div className="ml-auto hidden items-center gap-1 lg:flex">
           {LINKS.map((link) => (
             <NavLink key={link.to} to={link.to} className={navLinkClasses}>
               {link.label}
@@ -155,18 +152,19 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile cluster: cart + hamburger only. */}
-        <div className="ml-auto flex items-center gap-1 md:hidden">
+        {/* Mobile cluster: icon cart + hamburger. Text labels overflow a
+            320px pill and html { overflow-x: hidden } then clips the right. */}
+        <div className="ml-auto flex shrink-0 items-center lg:hidden">
           <NavLink
             to="/cart"
-            className={navLinkClasses}
+            className="relative flex h-11 w-11 items-center justify-center rounded-full text-muted transition-colors hover:bg-white/10 hover:text-white"
             aria-label={`Cart, ${itemCount} ${itemCount === 1 ? "item" : "items"}`}
           >
-            <span aria-hidden="true">Cart</span>
+            <CartGlyph />
             {itemCount > 0 ? (
               <span
                 aria-hidden="true"
-                className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-ember-deep px-1 font-body text-[10px] font-semibold text-white"
+                className="absolute right-1 top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-ember-deep px-1 font-body text-[9px] font-semibold text-white"
               >
                 {itemCount}
               </span>
@@ -177,8 +175,6 @@ export default function Navbar() {
             ref={drawerToggleRef}
             type="button"
             onClick={() => setIsDrawerOpen((open) => !open)}
-            // aria-expanded is what tells a screen reader whether the menu is
-            // open; without it this is an unlabelled button.
             aria-expanded={isDrawerOpen}
             aria-controls="mobile-drawer"
             aria-label={isDrawerOpen ? "Close menu" : "Open menu"}
@@ -197,7 +193,7 @@ export default function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="fx-glass pointer-events-auto absolute inset-x-4 top-20 rounded-card p-3 md:hidden"
+            className="fx-glass pointer-events-auto absolute inset-x-3 top-[4.5rem] rounded-card p-3 lg:hidden"
           >
             <ul className="flex flex-col">
               {LINKS.map((link) => (
@@ -275,6 +271,28 @@ function drawerLinkClasses({ isActive }) {
     "flex min-h-12 items-center rounded-card px-4 font-body text-sm transition-colors",
     isActive ? "bg-ember/15 text-ember" : "text-white hover:bg-white/5",
   ].join(" ");
+}
+
+function CartGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-[18px] w-[18px]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6 7h15l-1.4 8.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.6L5.2 4.5H3"
+      />
+      <circle cx="9" cy="20" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="18" cy="20" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  );
 }
 
 /** Two bars that cross into an X. aria-hidden -- the button carries the label. */

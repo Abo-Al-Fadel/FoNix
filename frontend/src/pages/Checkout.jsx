@@ -88,6 +88,10 @@ export default function Checkout() {
       setError("Name is required for handover.");
       return;
     }
+    if (delivery.phone.replace(/\D/g, "").length < 7) {
+      setError("A phone number is required so the hangar can reach you.");
+      return;
+    }
     if (delivery.method === "deliver") {
       const missing = ["line1", "city", "postcode"].filter(
         (field) => !delivery[field].trim(),
@@ -391,6 +395,7 @@ function HandoverFields({ delivery, deliver, updateDelivery }) {
           value={delivery.phone}
           onChange={updateDelivery("phone")}
           autoComplete="tel"
+          required
         />
       </div>
 

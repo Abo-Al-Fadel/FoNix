@@ -132,21 +132,56 @@ export function extractErrorMessage(error, fallback = "Something went wrong.") {
       : fallback;
   }
 
-  if (typeof data === "string") return data;
-  if (data.detail) return data.detail;
-
-  const firstField = Object.entries(data)[0];
-  if (!firstField) return fallback;
-
-  const [field, value] = firstField;
-  const message = Array.isArray(value) ? value[0] : String(value);
-
-  // Prefix with the field name unless it is a non-field error, so the user can
-  // tell which input the message is about.
-  return field === "non_field_errors" ? message : `${humanise(field)}: ${message}`;
+  const found = firstError(data);
+  return found || fallback;
 }
 
+/**
+ * Walk DRF's nested error objects until a string. `{ payment: { number: ["…"] } }`
+ * must not become "Payment: [object Object]".
+ */
+function firstError(value, field) {
+  if (value == null || value === "") return "";
+  if (typeof value === "string") {
+    return field && field !== "detail" && field !== "non_field_errors"
+      ? `${humanise(field)}: ${value}`
+      : value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = firstError(item, field);
+      if (found) return found;
+    }
+    return "";
+  }
+  if (typeof value === "object") {
+    if ("detail" in value) {
+      const found = firstError(value.detail);
+      if (found) return found;
+    }
+    for (const [key, nested] of Object.entries(value)) {
+      if (key === "detail") continue;
+      const found = firstError(nested, key);
+      if (found) return found;
+    }
+  }
+  return "";
+}
+
+const FIELD_LABELS = {
+  number: "Card number",
+  exp_month: "Expiry month",
+  exp_year: "Expiry year",
+  cvc: "Security code",
+  full_name: "Name",
+  line1: "Address",
+};
+
 function humanise(field) {
+  if (FIELD_LABELS[field]) return FIELD_LABELS[field];
   return field
     .replace(/_/g, " ")
     .replace(/^\w/, (character) => character.toUpperCase());

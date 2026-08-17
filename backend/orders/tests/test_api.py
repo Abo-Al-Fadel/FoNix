@@ -313,6 +313,15 @@ class OrderCreateAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(Order.objects.count(), 0)
 
+    def test_a_phone_number_is_required(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.place(
+            [{"car": self.ignis.slug, "quantity": 1}],
+            delivery={**COLLECT, "phone": ""},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Order.objects.count(), 0)
+
 
 class OrderListAPITests(APITestCase):
     """GET /api/orders/ -- scoping is the whole story here."""

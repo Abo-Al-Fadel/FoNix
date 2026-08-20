@@ -143,8 +143,14 @@ export default function ProductDetail() {
           </Link>
         </nav>
 
-        <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
-          <div>
+        {/* Three grid children: media, the buy panel, and the spec sheet.
+            On a phone (one column) they stack in source order -- media, buy
+            panel, spec -- so a buyer sees the car name, price and configurator
+            straight after the gallery instead of scrolling past the whole spec
+            table first. On desktop, explicit placement keeps media and spec in
+            the left column with the buy panel spanning both rows on the right. */}
+        <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:gap-x-16 lg:gap-y-12">
+          <div className="lg:col-start-1 lg:row-start-1">
             <div className="overflow-hidden rounded-card border border-hairline bg-graphite/60">
               <img
                 src={gallery[activeImage].image}
@@ -192,30 +198,9 @@ export default function ProductDetail() {
                 relabelled photograph of a different model.
               </p>
             ) : null}
-
-            {sheet.length > 0 ? (
-              <section className="mt-10">
-                <h2 className="font-heading text-lg font-bold text-white">
-                  Specification
-                </h2>
-                <dl className="mt-4 divide-y divide-hairline border-y border-hairline">
-                  {sheet.map((row) => (
-                    <div
-                      key={row.label}
-                      className="flex items-baseline justify-between gap-6 py-3"
-                    >
-                      <dt className="font-body text-xs uppercase tracking-[0.14em] text-faint">
-                        {row.label}
-                      </dt>
-                      <dd className="font-body text-sm text-white">{row.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
-            ) : null}
           </div>
 
-          <div className="lg:pt-4">
+          <div className="lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:pt-4">
             {car.is_hero ? <p className="fx-eyebrow">Flagship</p> : null}
 
             <h1
@@ -345,6 +330,27 @@ export default function ProductDetail() {
               {car.description}
             </div>
           </div>
+
+          {sheet.length > 0 ? (
+            <section className="lg:col-start-1 lg:row-start-2">
+              <h2 className="font-heading text-lg font-bold text-white">
+                Specification
+              </h2>
+              <dl className="mt-4 divide-y divide-hairline border-y border-hairline">
+                {sheet.map((row) => (
+                  <div
+                    key={row.label}
+                    className="flex items-baseline justify-between gap-6 py-3"
+                  >
+                    <dt className="font-body text-xs uppercase tracking-[0.14em] text-faint">
+                      {row.label}
+                    </dt>
+                    <dd className="font-body text-sm text-white">{row.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ) : null}
         </div>
       </div>
 

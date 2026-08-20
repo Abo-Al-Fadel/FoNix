@@ -45,6 +45,25 @@ const aliceToken = (await req("POST", "/auth/login/", { body: { username: alice.
 const bobToken = (await req("POST", "/auth/login/", { body: { username: bob.username, password: bob.password } })).data.access;
 console.log(`  alice token: ${aliceToken ? "ok" : "FAILED"}, bob token: ${bobToken ? "ok" : "FAILED"}\n`);
 
+// A valid checkout body under the current contract: an allocation now requires
+// delivery handover details and authorises a demonstration reservation. The
+// tampering probes below start from this and inject a hostile field, so they
+// exercise the real create path instead of bouncing off a 400 for missing data.
+function orderBody(overrides = {}) {
+  return {
+    items: [{ car: "ignis", quantity: 1 }],
+    delivery: { method: "collect", full_name: "Alice Probe", phone: "07700900123" },
+    payment: {
+      number: "4242424242424242",
+      exp_month: 12,
+      exp_year: new Date().getFullYear() + 4,
+      cvc: "123",
+      name: "Alice Probe",
+    },
+    ...overrides,
+  };
+}
+
 // ---------------------------------------------------------------- //
 console.log("=== A. Broken access control ===");
 
@@ -72,7 +91,7 @@ console.log("=== A. Broken access control ===");
 // A4: alice places an order, bob tries to read it (IDOR)
 let aliceOrderId;
 {
-  const placed = await req("POST", "/orders/", { token: aliceToken, body: { items: [{ car: "ignis", quantity: 1 }] } });
+  const placed = await req("POST", "/orders/", { token: aliceToken, body: orderBody() });
   aliceOrderId = placed.data?.id;
   const bobReads = await req("GET", `/orders/${aliceOrderId}/`, { token: bobToken });
   check("A4 IDOR: bob cannot read alice's order", bobReads.status === 404, `status=${bobReads.status} (404 preferred over 403)`);
@@ -118,7 +137,7 @@ console.log("\n=== C. Price / input tampering ===");
 
 // C1: supply own price_at_purchase
 {
-  const r = await req("POST", "/orders/", { token: aliceToken, body: { items: [{ car: "ignis", quantity: 1, price_at_purchase: "1.00" }] } });
+  const r = await req("POST", "/orders/", { token: aliceToken, body: orderBody({ items: [{ car: "ignis", quantity: 1, price_at_purchase: "1.00" }] }) });
   const total = r.data?.total;
   check("C1 client price is ignored (still full price)", total === "2400000.00", `total=${total}`);
 }
@@ -137,7 +156,7 @@ console.log("\n=== C. Price / input tampering ===");
 
 // C4: order on behalf of another user (user field injection)
 {
-  const r = await req("POST", "/orders/", { token: aliceToken, body: { user: 1, items: [{ car: "ignis", quantity: 1 }] } });
+  const r = await req("POST", "/orders/", { token: aliceToken, body: orderBody({ user: 1 }) });
   // Should succeed but be owned by alice, not user 1.
   const owned = r.data?.id ? await req("GET", `/orders/${r.data.id}/`, { token: aliceToken }) : { status: 0 };
   check("C4 user field injection ignored", r.status === 201 && owned.status === 200, `created=${r.status}, alice can read own=${owned.status}`);

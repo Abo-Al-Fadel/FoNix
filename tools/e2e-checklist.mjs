@@ -24,6 +24,33 @@ function record(id, name, ok, detail = "") {
   console.log(`[${tag}] ${id} ${name}${detail ? ` :: ${detail}` : ""}`);
 }
 
+/**
+ * Click the first visible button matching one of `names`. The checkout renders
+ * a desktop button (hidden on small screens) and a mobile sticky-bar button
+ * with a shorter label for the same action, so a plain getByRole would match
+ * two elements. This picks whichever is actually on screen.
+ */
+async function clickVisible(page, names) {
+  // Poll for up to 10s: the target may still be hydrating right after a
+  // navigation or a state change, and a single pass would race it.
+  const deadline = Date.now() + 10000;
+  while (Date.now() < deadline) {
+    for (const name of names) {
+      const buttons = page.getByRole("button", { name });
+      const count = await buttons.count();
+      for (let i = 0; i < count; i += 1) {
+        const button = buttons.nth(i);
+        if (await button.isVisible().catch(() => false)) {
+          await button.click();
+          return true;
+        }
+      }
+    }
+    await page.waitForTimeout(300);
+  }
+  throw new Error(`No visible button matched: ${names.join(", ")}`);
+}
+
 function attachConsoleWatch(page, label) {
   page.on("console", (msg) => {
     const type = msg.type();
@@ -308,50 +335,39 @@ const run = async () => {
       `gallery=${galleryCount} galleryClickChangedImage=${beforeSrc !== afterSrc} specs=${specsOk}`,
     );
 
-    // --- 5. Cart --------------------------------------------------------
-    await page.getByRole("button", { name: "Add to cart" }).click();
-    await page.waitForTimeout(250);
+    // --- 5. Cart (hold two allocations, persist, remove one) ------------
+    // Product CTA is "Hold allocation" now, not "Add to cart" -- an allocation
+    // is a build slot, not a warehouse item.
+    await clickVisible(page, [/Hold allocation/i, /Hold slot/i, /Update configuration/i, /Update/i]);
+    await page.waitForTimeout(300);
 
     await page.goto(`${BASE}/store/aurea`, { waitUntil: "domcontentloaded" });
-    await page.getByRole("button", { name: "Add to cart" }).click();
-    await page.waitForTimeout(250);
+    await clickVisible(page, [/Hold allocation/i, /Hold slot/i, /Update configuration/i, /Update/i]);
+    await page.waitForTimeout(300);
 
     await page.goto(`${BASE}/cart`, { waitUntil: "domcontentloaded" });
-    await page
-      .getByRole("button", { name: /Increase quantity of FoNix Ignis/i })
-      .waitFor({ timeout: 10000 });
-
-    // Increase the Ignis quantity to 2.
-    await page
-      .getByRole("button", { name: /Increase quantity of FoNix Ignis/i })
-      .click();
-    await page.waitForTimeout(250);
-
+    await page.waitForTimeout(500);
     let cartText = await page.locator("main").innerText();
-    const totalAfterIncrease = /£5,690,000/.test(cartText); // 2x2.4m + 890k
+    const bothInCart = /FoNix Ignis/.test(cartText) && /FoNix Aurea/.test(cartText);
 
-    // Persist across a reload.
+    // Persist across a reload (cart lives in localStorage).
     await page.reload({ waitUntil: "domcontentloaded" });
-    await page
-      .getByRole("button", { name: /Increase quantity of FoNix Ignis/i })
-      .waitFor({ timeout: 10000 });
+    await page.waitForTimeout(500);
     cartText = await page.locator("main").innerText();
-    const persisted = /£5,690,000/.test(cartText);
+    const persisted = /FoNix Ignis/.test(cartText) && /FoNix Aurea/.test(cartText);
 
-    // Remove the Aurea.
-    const removeButtons = page.getByRole("button", { name: "Remove" });
+    // Remove the Aurea; the Ignis stays.
     const aureaRow = page.locator("li").filter({ hasText: "FoNix Aurea" });
     await aureaRow.getByRole("button", { name: "Remove" }).click();
     await page.waitForTimeout(300);
     cartText = await page.locator("main").innerText();
-    const removedOk =
-      !/FoNix Aurea/.test(cartText) && /£4,800,000/.test(cartText);
+    const removedOk = !/FoNix Aurea/.test(cartText) && /FoNix Ignis/.test(cartText);
 
     record(
       id("5"),
-      "Cart: quantity, subtotal, removal, and localStorage persistence",
-      totalAfterIncrease && persisted && removedOk,
-      `qtyTotal=${totalAfterIncrease} persistedAcrossReload=${persisted} removal=${removedOk} (${await removeButtons.count()} remove buttons remain)`,
+      "Cart: hold allocations, persist across reload, remove a line",
+      bothInCart && persisted && removedOk,
+      `bothInCart=${bothInCart} persistedAcrossReload=${persisted} removal=${removedOk}`,
     );
 
     // --- 6. Register ----------------------------------------------------
@@ -394,17 +410,35 @@ const run = async () => {
     await page.waitForURL(/\/account/, { timeout: 15000 });
     record(id("6b"), "Log in with the newly created account", true);
 
-    // --- 7. Checkout ----------------------------------------------------
+    // --- 7. Checkout (3-step allocation: review, handover, reservation) -
     await page.goto(`${BASE}/checkout`, { waitUntil: "domcontentloaded" });
-    await page.getByRole("button", { name: /Place order/i }).click();
-    await page.waitForTimeout(1800);
+    await page.waitForTimeout(500);
+
+    // Step 1 -> handover.
+    await clickVisible(page, [/Continue to handover/i, /^Continue$/i]);
+    await page.waitForTimeout(500);
+
+    // Step 2: handover details, then -> reservation.
+    await page.getByLabel("Full name").fill("Test Driver");
+    await page.getByLabel("Phone").fill("07700 900123");
+    await clickVisible(page, [/Continue to reservation/i, /^Continue$/i]);
+    await page.waitForTimeout(500);
+
+    // Step 3: the demonstration card, then authorise.
+    await page.getByLabel("Card number").fill("4242 4242 4242 4242");
+    await page.getByLabel("Expiry").fill("12 / 34");
+    await page.getByLabel("CVC").fill("123");
+    await page.getByLabel("Name on card").fill("Test Driver");
+    await clickVisible(page, [/Pay .*reservation/i, /Pay reservation/i]);
+    await page.waitForTimeout(2200);
 
     const confirmationText = await page.locator("main").innerText();
-    const orderPlaced = /Thank you/.test(confirmationText);
-    const orderNumber = confirmationText.match(/Order #(\d+)/)?.[1];
+    const orderPlaced = /The slot is yours/i.test(confirmationText);
+    const orderNumber = confirmationText.match(/#(\d+)/)?.[1];
 
     // Cart must be empty afterwards.
     await page.goto(`${BASE}/cart`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(400);
     const cartCleared = /Your cart is empty/.test(
       await page.locator("main").innerText(),
     );
@@ -413,29 +447,32 @@ const run = async () => {
     const token = await page.evaluate(() =>
       window.localStorage.getItem("fonix.auth.access"),
     );
-    const apiOrders = await fetch(`${API}/orders/`, {
+    const apiOrders = await fetch(`${API}/orders/?mine=1`, {
       headers: { Authorization: `Bearer ${token}` },
     }).then((r) => r.json());
+    const list = apiOrders.results ?? apiOrders;
+    const placed = Array.isArray(list) ? list[0] : undefined;
     const serverHasOrder =
-      apiOrders.results?.length === 1 &&
-      apiOrders.results[0].total === "4800000.00";
+      !!placed &&
+      placed.total === "2400000.00" &&
+      placed.payment_status === "authorized";
 
     record(
       id("7"),
-      "Checkout creates a real Order server-side and clears the cart",
+      "Checkout: 3-step allocation flow authorises a reservation and clears the cart",
       orderPlaced && cartCleared && serverHasOrder,
-      `order#${orderNumber} cartCleared=${cartCleared} serverTotal=${apiOrders.results?.[0]?.total}`,
+      `order#${orderNumber} placed=${orderPlaced} cartCleared=${cartCleared} total=${placed?.total} pay=${placed?.payment_status}`,
     );
 
-    // --- 8. Orders visible on the account page --------------------------
+    // --- 8. Allocation visible on the account page ----------------------
     await page.goto(`${BASE}/account`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(900);
     const accountText = await page.locator("main").innerText();
     record(
       id("8"),
-      "The placed order appears on the account page",
-      new RegExp(`Order #${orderNumber}`).test(accountText) &&
-        /£4,800,000/.test(accountText),
+      "The placed allocation appears on the account page",
+      (orderNumber ? new RegExp(`#${orderNumber}`).test(accountText) : false) &&
+        /£2,400,000/.test(accountText),
     );
 
     // --- 9. Logged-out /account redirects to login ----------------------

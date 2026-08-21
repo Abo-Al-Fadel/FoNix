@@ -36,11 +36,25 @@ SUPERUSER_USERNAME = "fonix"
 class Command(BaseCommand):
     help = "Create demo owner/admin/staff accounts and promote the superuser to Owner."
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help=(
+                "Allow running with DEBUG=False. Only for a portfolio-demo host "
+                "whose whole point is the published demo logins (see "
+                "backend/render-start.sh). The passwords are public; never use "
+                "this where the accounts are real."
+            ),
+        )
+
     def handle(self, *args, **options):
-        if not settings.DEBUG:
+        if not settings.DEBUG and not options["force"]:
             raise CommandError(
                 "seed_team is for local development only. It creates accounts "
-                "with published demo passwords and must not run in production."
+                "with published demo passwords and must not run in production. "
+                "Pass --force on a demo host that intends this (see "
+                "backend/render-start.sh)."
             )
 
         for username, email, first_name, role, password in DEMO_TEAM:

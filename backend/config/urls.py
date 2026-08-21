@@ -9,7 +9,8 @@ every time any app grows an endpoint.
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
+from django.views.static import serve as media_serve
 
 from config.health import health
 
@@ -23,12 +24,25 @@ urlpatterns = [
     path("api/contact/", include("contact.urls")),
 ]
 
+# Serving user media.
+#
+# The Docker Compose deploy puts Caddy in front of MEDIA_ROOT, so Django never
+# serves media there. A single-container host (Render, Fly, a bare dyno) has no
+# such front, so Django has to serve it. SERVE_MEDIA turns that on. It is fine
+# for a low-traffic portfolio; a busy site would put object storage or a CDN in
+# front instead. In local development DEBUG does the same thing.
 if settings.DEBUG:
-    # Django does not serve user-uploaded media in production -- a real deploy
-    # puts nginx or object storage in front of MEDIA_ROOT. This helper exists
-    # purely so car images load on a developer machine, and it is a no-op when
-    # DEBUG is False.
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+elif getattr(settings, "SERVE_MEDIA", False):
+    urlpatterns += [
+        re_path(
+            r"^media/(?P<path>.*)$",
+            media_serve,
+            {"document_root": settings.MEDIA_ROOT},
+        ),
+    ]
+
+if settings.DEBUG:
 
     # debug_toolbar is only installed under local settings.
     if "debug_toolbar" in settings.INSTALLED_APPS:

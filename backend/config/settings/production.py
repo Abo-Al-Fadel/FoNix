@@ -14,14 +14,26 @@ from .base import MIDDLEWARE, env
 DEBUG = False
 
 ALLOWED_HOSTS = [host for host in env("ALLOWED_HOSTS") if host]
-if not ALLOWED_HOSTS:
-    raise ImproperlyConfigured("ALLOWED_HOSTS must be set in production.")
 
-# Railway's health check and public URL use this hostname. Appending it means
-# a forgotten extra host does not 400 the platform probe.
-_railway_host = env("RAILWAY_PUBLIC_DOMAIN", default="")
-if _railway_host and _railway_host not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS = [*ALLOWED_HOSTS, _railway_host]
+# Some platforms publish the service's own hostname at runtime (Render sets
+# RENDER_EXTERNAL_HOSTNAME, Railway sets RAILWAY_PUBLIC_DOMAIN). Appending it
+# means the platform's health probe and public URL work without the operator
+# having to know the generated hostname in advance -- so on Render you can leave
+# ALLOWED_HOSTS unset and the service still answers on its onrender.com URL.
+_platform_hosts = [
+    env(var, default="")
+    for var in ("RENDER_EXTERNAL_HOSTNAME", "RAILWAY_PUBLIC_DOMAIN")
+]
+_platform_hosts = [host for host in _platform_hosts if host]
+for _host in _platform_hosts:
+    if _host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS = [*ALLOWED_HOSTS, _host]
+
+if not ALLOWED_HOSTS:
+    raise ImproperlyConfigured(
+        "ALLOWED_HOSTS must be set in production (or run on a platform that "
+        "publishes its hostname, e.g. Render)."
+    )
 
 CORS_ALLOWED_ORIGINS = [origin for origin in env("CORS_ALLOWED_ORIGINS") if origin]
 if not CORS_ALLOWED_ORIGINS:
@@ -36,14 +48,15 @@ if "localhost" in FRONTEND_ORIGIN or "127.0.0.1" in FRONTEND_ORIGIN:
     )
 
 # Django admin POSTs (login) fail CSRF on HTTPS unless this lists the API
-# origin. Railway's public domain is added automatically when present.
+# origin. The platform hostname (Render/Railway) is added automatically when
+# present, so /admin/ login works on the generated URL without extra config.
 CSRF_TRUSTED_ORIGINS = [
     origin for origin in env.list("CSRF_TRUSTED_ORIGINS", default=[]) if origin
 ]
-if _railway_host:
-    _railway_origin = f"https://{_railway_host}"
-    if _railway_origin not in CSRF_TRUSTED_ORIGINS:
-        CSRF_TRUSTED_ORIGINS = [*CSRF_TRUSTED_ORIGINS, _railway_origin]
+for _host in _platform_hosts:
+    _origin = f"https://{_host}"
+    if _origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS = [*CSRF_TRUSTED_ORIGINS, _origin]
 if not CSRF_TRUSTED_ORIGINS:
     raise ImproperlyConfigured(
         "CSRF_TRUSTED_ORIGINS must be set in production "
@@ -62,6 +75,12 @@ DATABASES = {"default": env.db("DATABASE_URL")}
 # --------------------------------------------------------------------------- #
 # HTTPS / transport security
 # --------------------------------------------------------------------------- #
+
+# Single-container hosts (Render, Fly, a bare VM without Caddy) have no separate
+# web server for /media/, so Django serves it. Off by default: the Docker
+# Compose deploy uses Caddy for media and must not double-serve it. See
+# config/urls.py. Set SERVE_MEDIA=1 on hosts that need it.
+SERVE_MEDIA = env.bool("SERVE_MEDIA", default=False)
 
 SECURE_SSL_REDIRECT = True
 # Railway (and most platforms) probe health over plain HTTP inside the mesh.

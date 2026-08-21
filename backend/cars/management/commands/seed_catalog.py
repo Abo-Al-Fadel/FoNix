@@ -353,13 +353,23 @@ class Command(BaseCommand):
             action="store_true",
             help="Delete existing cars first. Refuses if any car has been ordered.",
         )
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help=(
+                "Allow running with DEBUG=False. Only for a portfolio-demo host "
+                "that deliberately reseeds its catalogue on boot (see "
+                "backend/render-start.sh). Never use against real data."
+            ),
+        )
 
     @transaction.atomic
     def handle(self, *args, **options):
-        if not settings.DEBUG:
+        if not settings.DEBUG and not options["force"]:
             raise CommandError(
                 "seed_catalog is for local development only and must not run "
-                "in production."
+                "in production. Pass --force on a demo host that intends to "
+                "reseed (see backend/render-start.sh)."
             )
 
         assets: Path = options["assets"]

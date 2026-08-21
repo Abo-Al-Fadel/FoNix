@@ -4,32 +4,97 @@ The site is two programs. The React app is a static build. The Django API is a
 container (or a VM running that container). They talk over HTTPS; they do not
 share a process.
 
-This file is the production checklist. It is not a "click deploy" script.
+This file is the production checklist.
 
-## Recommended: free and lasting
+## Fastest free path: Render + Vercel (no credit card)
 
-Railway is optional. For something **free and as permanent as a portfolio
-site can be**, use:
+Render's free tier deploys straight from GitHub, needs no card, and gives you a
+free Postgres. The frontend goes on Vercel (also free, no card). This is the
+quickest way to get FoNix live. The trade-offs: the API sleeps after 15 minutes
+idle and takes ~40s to wake on the next request, and the free Postgres is wiped
+after 90 days (Render emails first; you create a new one and redeploy).
 
-| Piece | Host | Why |
-|---|---|---|
-| Frontend | **Vercel** (Hobby) or **Cloudflare Pages** | Static SPA. The free tier is enough forever at this scale. |
-| API + Postgres | **Oracle Cloud Always Free** ARM VM | A real VM that stays on. Ampere A1: up to 4 OCPU / 24 GB in the always-free basket. You install Docker, run the `backend/Dockerfile`, and run Postgres on the same box (or Oracle's always-free Autonomous DB). |
+The repo already carries what Render needs: `render.yaml` (a Blueprint),
+`backend/Dockerfile`, and `backend/render-start.sh` (migrate, seed the demo
+catalogue and team, then gunicorn). `production.py` auto-detects Render's
+hostname, so you do not have to know the URL in advance.
 
-That combination is the one that stays up without a credit card billing you
-monthly. Oracle still asks for a card at signup to stop spam accounts; they
-do not charge the always-free VM if you stay inside the cap. Keep a monthly
-calendar reminder to log in — unused always-free accounts can be reclaimed.
+### Part A — the backend on Render
 
-### Easier API host (not strictly free-forever)
+1. Push to GitHub (already done). Sign up at **render.com** with your GitHub
+   account. No card.
+2. **New > Blueprint**, pick the `FoNix` repo, and **Apply**. Render reads
+   `render.yaml` and creates two things: the `fonix-api` web service and a free
+   `fonix-db` Postgres, already linked by `DATABASE_URL`.
+3. First build fails or the app 400s until the origin vars are set — that is
+   expected; you set them in step 6 after the frontend exists. Let the build
+   finish; note the service URL, e.g. `https://fonix-api.onrender.com`.
+4. Confirm the API is alive: open `https://fonix-api.onrender.com/api/health/`.
+   It returns `{"ok": true}`. (First hit after idle takes ~40s — that is the
+   free-tier cold start, not a bug.)
 
-**Fly.io** runs the existing Dockerfile with almost no ceremony (`fly launch`
-in `backend/`). Machines can scale to zero. The free allowance is real but
-it is an allowance, not a contract: fine for a demo, weaker as a "this will
-still be here in two years" promise than Oracle's always-free SKU.
+If you would rather not use the Blueprint, create the service by hand: **New >
+Web Service**, the repo, **Root Directory** `backend`, **Runtime** Docker,
+**Docker Command** `sh render-start.sh`, **Health Check Path** `/api/health/`,
+plan Free; then **New > Postgres** (free) and copy its Internal Database URL into
+the service's `DATABASE_URL`. Set the env vars from the table below.
 
-Render, Railway and similar PaaS free tiers sleep, expire, or start billing.
-Use them if you want convenience and are willing to pay later.
+### Part B — the frontend on Vercel
+
+5. Sign up at **vercel.com** with GitHub. **Add New > Project**, pick `FoNix`,
+   set **Root Directory** to `frontend`. Vercel detects Vite. Add one env var:
+
+   | Key | Value |
+   |---|---|
+   | `VITE_API_BASE_URL` | `https://fonix-api.onrender.com/api` (your Render URL + `/api`) |
+   | `VITE_SITE_URL` | your Vercel URL, e.g. `https://fonix.vercel.app` (optional; used for `sitemap.xml`) |
+
+   Deploy. Note the Vercel URL, e.g. `https://fonix.vercel.app`.
+
+### Part C — tell the API about the frontend
+
+6. Back in Render, open `fonix-api` > **Environment**, and set both to your
+   Vercel URL (no trailing slash):
+
+   | Key | Value |
+   |---|---|
+   | `CORS_ALLOWED_ORIGINS` | `https://fonix.vercel.app` |
+   | `FRONTEND_ORIGIN` | `https://fonix.vercel.app` |
+
+   Save. Render redeploys. `SECRET_KEY`, `DATABASE_URL`, `SERVE_MEDIA`, and
+   `DJANGO_SETTINGS_MODULE` were set by the Blueprint already.
+7. Open the Vercel URL. The store loads six cars from the live API. Sign in with
+   the demo owner (`owner` / `owner-demo-2049`) and open `/dashboard`. Django
+   admin is at `https://fonix-api.onrender.com/admin/` — the boot script created
+   the demo accounts, and the `fonix` superuser exists if you also run
+   `createsuperuser` from the Render shell.
+
+### What reseeds, and the one caveat
+
+`render-start.sh` reseeds the catalogue on every boot **on purpose**: a free
+Render instance gets a fresh disk each time it wakes, so the car images under
+`/media/` are gone, and reseeding rewrites them. The cost is that demo orders
+placed by a visitor are cleared when the instance next sleeps. For a portfolio
+that is fine. To make orders and uploaded images durable, move media to object
+storage (Cloudinary has a free, no-card tier) with `django-storages`, then drop
+`--reset` from `render-start.sh` so the seed becomes create-if-missing. That is
+the only change needed for persistence; the rest of this deploy is unaffected.
+
+## If you want always-on later (Oracle needs a card at signup)
+
+Render sleeps when idle. If you later want a backend that never sleeps and never
+expires, without a monthly bill, the choice is an **Oracle Cloud Always Free**
+ARM VM running the `backend/docker-compose.yml` stack (Postgres + API + Caddy
+for TLS). Ampere A1 gives up to 4 OCPU / 24 GB in the always-free basket. Oracle
+asks for a card at signup to stop spam accounts but does not charge the
+always-free VM inside the cap. Frontend stays on Vercel either way.
+
+**Fly.io** is a middle ground: it runs the existing Dockerfile with `fly launch`
+in `backend/` and can scale to zero. Its free allowance is real but is an
+allowance, not a contract.
+
+Railway also runs the Dockerfile, but its free credit lasts about a month, so it
+is not a lasting free host.
 
 ## What this deploy does not include yet
 
@@ -49,36 +114,41 @@ These are deliberate deferrals, not forgotten work:
   would have to name that host, and a wrong one would block the catalog.
   Add CSP after the API URL is stable.
 
-## Backend (Oracle Always Free, or Fly.io)
+## Backend environment variables (all hosts)
 
 Set the service **root directory** to `backend/`. The Dockerfile lives there.
-Run `migrate` **once** per deploy as a release step, then start gunicorn.
-Do not add migrate to `CMD` — workers would race.
+The Render Blueprint and `render-start.sh` handle migrate + seed on boot; on
+Oracle/Fly, run `migrate` once per deploy as a release step, then start gunicorn
+(do not put migrate in `CMD` — parallel workers would race it).
 
 Required variables:
 
 | Variable | Example |
 |---|---|
-| `SECRET_KEY` | A new key, not the local one. Generate with Django's `get_random_secret_key`. |
-| `DATABASE_URL` | Postgres URL. There is **no SQLite fallback** in production. |
-| `ALLOWED_HOSTS` | Public API hostname, comma-separated if more than one. |
-| `CORS_ALLOWED_ORIGINS` | The frontend origin, e.g. `https://www.example.com`. No trailing slash. |
-| `CSRF_TRUSTED_ORIGINS` | The API origin with scheme, e.g. `https://api.example.com`. Needed for `/admin/`. |
+| `SECRET_KEY` | A new key, not the local one. Generate with Django's `get_random_secret_key`. On Render the Blueprint generates it. |
+| `DATABASE_URL` | Postgres URL. There is **no SQLite fallback** in production. On Render the Blueprint wires it from `fonix-db`. |
+| `ALLOWED_HOSTS` | Public API hostname, comma-separated if more than one. **Optional on Render** — `RENDER_EXTERNAL_HOSTNAME` is appended automatically. |
+| `CORS_ALLOWED_ORIGINS` | The frontend origin, e.g. `https://fonix.vercel.app`. No trailing slash. |
+| `CSRF_TRUSTED_ORIGINS` | The API origin with scheme, e.g. `https://api.example.com`. Needed for `/admin/`. **Optional on Render** — the onrender.com origin is added automatically. |
 | `FRONTEND_ORIGIN` | Same as the frontend origin. Password-reset emails link here. Localhost is refused. |
 
 Optional:
 
 | Variable | Default | Notes |
 |---|---|---|
-| `RAILWAY_PUBLIC_DOMAIN` | (unset) | Only if you still use Railway. Appended to `ALLOWED_HOSTS` / `CSRF_TRUSTED_ORIGINS`. |
+| `SERVE_MEDIA` | `0` | Set to `1` on a single-container host (Render, Fly) so Django serves `/media/`. The Compose deploy leaves it off and lets Caddy serve media. |
+| `RENDER_EXTERNAL_HOSTNAME` | (set by Render) | Auto-added to `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS`. You do not set this yourself. |
+| `RAILWAY_PUBLIC_DOMAIN` | (unset) | Same auto-append, for Railway. You do not set this yourself. |
 | `DEFAULT_FROM_EMAIL` | `FoNix <noreply@localhost>` | From-address on password-reset mail. |
 | `EMAIL_BACKEND` | console | Switch to SMTP when mail should actually leave the box. |
-| `PORT` | `8000` | gunicorn binds to it. Fly.io and most VMs set this. |
+| `PORT` | `8000` | gunicorn binds to it. Render, Fly and most VMs set this. |
 
 `GET /api/health/` returns `{"ok": true}` and is exempt from the HTTP→HTTPS
 redirect so a mesh probe is not 301'd into a false-unhealthy loop.
 
-`seed_team` and `seed_catalog` refuse to run when `DEBUG` is False.
+`seed_team` and `seed_catalog` refuse to run when `DEBUG` is False, unless you
+pass `--force`. Only the portfolio-demo boot script (`backend/render-start.sh`)
+does that, because its whole point is a reset demo with published logins.
 
 ### Oracle Always Free — what runs on the VM
 

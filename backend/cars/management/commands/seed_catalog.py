@@ -24,16 +24,23 @@ from cars.models import CarImage, CarModel, CarOption
 
 from ._placeholder_art import render_placeholder
 
-# The flagship's stills are pulled from the very same 215-frame sequence the
-# homepage hero scrubs through, which lives (committed) in the frontend's public
-# folder. Reading from there rather than a separate source copy means there is
-# ONE canonical set of frames in the repo, not two that can drift apart.
-DEFAULT_ASSET_DIR = Path(settings.BASE_DIR).parent / "frontend" / "public" / "frames"
+# Asset roots. In a full checkout the canonical images live in the frontend's
+# public folder -- ONE set of frames and product shots, shared with the hero
+# scrubber, not two copies that can drift. But the production backend ships as
+# its OWN Docker image that deliberately does not contain the frontend (see
+# backend/Dockerfile), so on that host the frontend paths do not exist. For
+# exactly the handful of files this command needs, a small copy is bundled under
+# backend/seed_assets/. Prefer the canonical frontend copy when present (local
+# dev, full checkout); fall back to the bundled subset (the backend-only image).
+_FRONTEND_PUBLIC = Path(settings.BASE_DIR).parent / "frontend" / "public"
+_BUNDLED_ASSETS = Path(settings.BASE_DIR) / "seed_assets"
 
-# The five non-flagship models have real (generated) studio photography, one
-# optimised WebP hero + one gallery shot each, committed under the frontend's
-# public folder. Same "one canonical home" principle as the frames above.
-PRODUCT_DIR = Path(settings.BASE_DIR).parent / "frontend" / "public" / "product"
+if (_FRONTEND_PUBLIC / "frames").is_dir():
+    DEFAULT_ASSET_DIR = _FRONTEND_PUBLIC / "frames"
+    PRODUCT_DIR = _FRONTEND_PUBLIC / "product"
+else:
+    DEFAULT_ASSET_DIR = _BUNDLED_ASSETS / "frames"
+    PRODUCT_DIR = _BUNDLED_ASSETS / "product"
 
 # Which frames of the 215-frame orbit sequence become the flagship's product
 # stills. They are all genuinely different views of the same car, which is

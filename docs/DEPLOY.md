@@ -6,79 +6,104 @@ share a process.
 
 This file is the production checklist.
 
-## Fastest free path: Render + Vercel (no credit card)
+## Fastest free path: Neon + Render + Vercel (no credit card, DB never expires)
 
-Render's free tier deploys straight from GitHub, needs no card, and gives you a
-free Postgres. The frontend goes on Vercel (also free, no card). This is the
-quickest way to get FoNix live. The trade-offs: the API sleeps after 15 minutes
-idle and takes ~40s to wake on the next request, and the free Postgres is wiped
-after 90 days (Render emails first; you create a new one and redeploy).
+Three free tiers, none needing a card: **Neon** for Postgres (free tier does not
+expire — it scales to zero when idle and wakes on the next connection),
+**Render** for the Django API, **Vercel** for the React app. The one Render
+trade-off remains: the API sleeps after 15 minutes idle and takes ~40s to wake.
+
+> Why not Render's own Postgres? Its free database expires after ~90 days. Neon's
+> free tier does not, which is why the Blueprint no longer creates a Render DB —
+> you paste a Neon URL into `DATABASE_URL` instead.
 
 The repo already carries what Render needs: `render.yaml` (a Blueprint),
 `backend/Dockerfile`, and `backend/render-start.sh` (migrate, seed the demo
 catalogue and team, then gunicorn). `production.py` auto-detects Render's
 hostname, so you do not have to know the URL in advance.
 
-### Part A — the backend on Render
+**Do the parts in order.** The API refuses to boot until it knows its database
+and its frontend origin, so the database and the frontend come first. A first
+Render deploy *before* those vars are set will crash with
+`ImproperlyConfigured: CORS_ALLOWED_ORIGINS must be set` — that is the guard
+working, not a bug. You clear it in Part D.
 
-1. Push to GitHub (already done). Sign up at **render.com** with your GitHub
-   account. No card.
-2. **New > Blueprint**, pick the `FoNix` repo, and **Apply**. Render reads
-   `render.yaml` and creates two things: the `fonix-api` web service and a free
-   `fonix-db` Postgres, already linked by `DATABASE_URL`.
-3. First build fails or the app 400s until the origin vars are set — that is
-   expected; you set them in step 6 after the frontend exists. Let the build
-   finish; note the service URL, e.g. `https://fonix-api.onrender.com`.
-4. Confirm the API is alive: open `https://fonix-api.onrender.com/api/health/`.
-   It returns `{"ok": true}`. (First hit after idle takes ~40s — that is the
-   free-tier cold start, not a bug.)
+### Part A — the database on Neon
 
-If you would rather not use the Blueprint, create the service by hand: **New >
-Web Service**, the repo, **Root Directory** `backend`, **Runtime** Docker,
-**Docker Command** `sh render-start.sh`, **Health Check Path** `/api/health/`,
-plan Free; then **New > Postgres** (free) and copy its Internal Database URL into
-the service's `DATABASE_URL`. Set the env vars from the table below.
+1. Sign up at **neon.tech** with your GitHub account. No card.
+2. Create a project (any name, e.g. `fonix`). Neon makes a Postgres instantly.
+3. On the project's **Dashboard > Connect**, copy the connection string. It looks
+   like `postgresql://user:pass@ep-xxx.region.aws.neon.tech/dbname?sslmode=require`.
+   Keep the `?sslmode=require` on the end (add it if the copied URL lacks it).
+   This is your `DATABASE_URL` — hold onto it for Part C.
 
-### Part B — the frontend on Vercel
+### Part B — the API service on Render (creates the URL, not yet green)
 
-5. Sign up at **vercel.com** with GitHub. **Add New > Project**, pick `FoNix`,
-   set **Root Directory** to `frontend`. Vercel detects Vite. Add one env var:
+4. Sign up at **render.com** with GitHub. No card.
+5. **New > Blueprint**, pick the `FoNix` repo, **Apply**. Render reads
+   `render.yaml` and creates the `fonix-api` web service (no database — that is
+   Neon). Note the service URL, e.g. `https://fonix-api.onrender.com`.
+6. This first build **will fail** on boot because `DATABASE_URL` and the origin
+   vars are still empty. Expected — you fill them next. Do not delete anything.
+
+   *(Prefer not to use the Blueprint? Create it by hand: **New > Web Service**,
+   the repo, **Root Directory** `backend`, **Runtime** Docker, **Docker Command**
+   `sh render-start.sh`, **Health Check Path** `/api/health/`, plan Free. Then add
+   every env var from the table below, including `DJANGO_SETTINGS_MODULE` and
+   `SERVE_MEDIA=1`.)*
+
+### Part C — the frontend on Vercel
+
+7. Sign up at **vercel.com** with GitHub. **Add New > Project**, pick `FoNix`,
+   set **Root Directory** to `frontend`. Vercel detects Vite. Add:
 
    | Key | Value |
    |---|---|
-   | `VITE_API_BASE_URL` | `https://fonix-api.onrender.com/api` (your Render URL + `/api`) |
+   | `VITE_API_BASE_URL` | `https://fonix-api.onrender.com/api` (your Render URL from step 5 + `/api`) |
    | `VITE_SITE_URL` | your Vercel URL, e.g. `https://fonix.vercel.app` (optional; used for `sitemap.xml`) |
 
    Deploy. Note the Vercel URL, e.g. `https://fonix.vercel.app`.
 
-### Part C — tell the API about the frontend
+### Part D — wire the API to the database and the frontend, then deploy
 
-6. Back in Render, open `fonix-api` > **Environment**, and set both to your
-   Vercel URL (no trailing slash):
+8. Back in Render, open `fonix-api` > **Environment**. Set the three `sync:false`
+   vars the Blueprint left blank:
 
    | Key | Value |
    |---|---|
-   | `CORS_ALLOWED_ORIGINS` | `https://fonix.vercel.app` |
-   | `FRONTEND_ORIGIN` | `https://fonix.vercel.app` |
+   | `DATABASE_URL` | your Neon string from Part A (with `?sslmode=require`) |
+   | `CORS_ALLOWED_ORIGINS` | your Vercel URL, e.g. `https://fonix.vercel.app` (no trailing slash) |
+   | `FRONTEND_ORIGIN` | the same Vercel URL |
 
-   Save. Render redeploys. `SECRET_KEY`, `DATABASE_URL`, `SERVE_MEDIA`, and
-   `DJANGO_SETTINGS_MODULE` were set by the Blueprint already.
-7. Open the Vercel URL. The store loads six cars from the live API. Sign in with
-   the demo owner (`owner` / `owner-demo-2049`) and open `/dashboard`. Django
-   admin is at `https://fonix-api.onrender.com/admin/` — the boot script created
-   the demo accounts, and the `fonix` superuser exists if you also run
-   `createsuperuser` from the Render shell.
+   Save. Render redeploys, and this time it boots green — `render-start.sh`
+   migrates the Neon database, seeds the demo catalogue and team, then starts
+   gunicorn. `SECRET_KEY`, `SERVE_MEDIA`, and `DJANGO_SETTINGS_MODULE` were set by
+   the Blueprint already.
+9. Confirm the API is alive: open `https://fonix-api.onrender.com/api/health/` →
+   `{"ok": true}`. (First hit after idle takes ~40s — free-tier cold start.)
+10. Open the Vercel URL. The store loads six cars from the live API. Sign in with
+    the demo owner (`owner` / `owner-demo-2049`) and open `/dashboard`. Django
+    admin is at `https://fonix-api.onrender.com/admin/` — the boot script created
+    the demo accounts, and the `fonix` superuser exists if you also run
+    `createsuperuser` from the Render shell.
 
 ### What reseeds, and the one caveat
 
-`render-start.sh` reseeds the catalogue on every boot **on purpose**: a free
-Render instance gets a fresh disk each time it wakes, so the car images under
-`/media/` are gone, and reseeding rewrites them. The cost is that demo orders
-placed by a visitor are cleared when the instance next sleeps. For a portfolio
-that is fine. To make orders and uploaded images durable, move media to object
-storage (Cloudinary has a free, no-card tier) with `django-storages`, then drop
-`--reset` from `render-start.sh` so the seed becomes create-if-missing. That is
-the only change needed for persistence; the rest of this deploy is unaffected.
+Neon keeps your *database* forever, but note what it does **not** solve on its
+own: Render's disk is still ephemeral. `render-start.sh` reseeds the catalogue on
+every boot **on purpose**, because a free Render instance gets a fresh disk each
+time it wakes and the car images under `/media/` are gone — reseeding rewrites
+them. That reseed uses `seed_catalog --reset`, which deletes and recreates the
+car rows (and clears demo orders first, since `Order.item.car` is `PROTECT`). So
+even with a durable Neon database, demo data still resets on each cold start
+today, because the images and the catalogue are regenerated together.
+
+For a portfolio that is fine. To make orders and uploaded images genuinely
+durable, do both: move media to object storage (Cloudinary has a free, no-card
+tier) with `django-storages`, then drop `--reset` from `render-start.sh` so the
+seed becomes create-if-missing. Once images no longer live on the ephemeral disk,
+there is nothing to regenerate, the catalogue and orders persist in Neon across
+sleeps, and the rest of this deploy is unaffected.
 
 ## If you want always-on later (Oracle needs a card at signup)
 
@@ -126,7 +151,7 @@ Required variables:
 | Variable | Example |
 |---|---|
 | `SECRET_KEY` | A new key, not the local one. Generate with Django's `get_random_secret_key`. On Render the Blueprint generates it. |
-| `DATABASE_URL` | Postgres URL. There is **no SQLite fallback** in production. On Render the Blueprint wires it from `fonix-db`. |
+| `DATABASE_URL` | Postgres URL. There is **no SQLite fallback** in production. On the free path this is your **Neon** connection string (keep `?sslmode=require`); the Blueprint leaves it blank for you to paste in. |
 | `ALLOWED_HOSTS` | Public API hostname, comma-separated if more than one. **Optional on Render** — `RENDER_EXTERNAL_HOSTNAME` is appended automatically. |
 | `CORS_ALLOWED_ORIGINS` | The frontend origin, e.g. `https://fonix.vercel.app`. No trailing slash. |
 | `CSRF_TRUSTED_ORIGINS` | The API origin with scheme, e.g. `https://api.example.com`. Needed for `/admin/`. **Optional on Render** — the onrender.com origin is added automatically. |
